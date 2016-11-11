@@ -374,9 +374,9 @@ class XmlLoader(loader.Loader):
             
             # optional attributes
             machine, args, output, respawn, respawn_delay, cwd, launch_prefix, \
-                    required = self.opt_attrs(tag, context, ('machine', 'args',
+                    required, priority = self.opt_attrs(tag, context, ('machine', 'args',
                         'output', 'respawn', 'respawn_delay', 'cwd',
-                        'launch-prefix', 'required'))
+                        'launch-prefix', 'required', 'priority'))
             if tag.hasAttribute('machine') and not len(machine.strip()):
                 raise XmlParseException("<node> 'machine' must be non-empty: [%s]"%machine)
             if not machine and default_machine:
@@ -385,6 +385,9 @@ class XmlLoader(loader.Loader):
             required, respawn = [_bool_attr(*rr) for rr in ((required, False, 'required'),\
                                                                 (respawn, False, 'respawn'))]
             respawn_delay = _float_attr(respawn_delay, 0.0, 'respawn_delay')
+
+            # priority should be an int if not provided
+            priority = int(priority or Node.DefaultPriority)
 
             # each node gets its own copy of <remap> arguments, which
             # it inherits from its parent
@@ -427,13 +430,13 @@ class XmlLoader(loader.Loader):
                             respawn_delay=respawn_delay,
                             remap_args=remap_context.remap_args(), env_args=env_context.env_args,
                             output=output, cwd=cwd, launch_prefix=launch_prefix,
-                            required=required, filename=context.filename)
+                            required=required, filename=context.filename, priority=priority)
             else:
                 return Test(test_name, pkg, node_type, name=name, namespace=child_ns.ns, 
                             machine_name=machine, args=args,
                             remap_args=remap_context.remap_args(), env_args=env_context.env_args,
                             time_limit=time_limit, cwd=cwd, launch_prefix=launch_prefix,
-                            retry=retry, filename=context.filename)
+                            retry=retry, filename=context.filename, priority=priority)
         except KeyError as e:
             raise XmlParseException(
                 "<%s> tag is missing required attribute: %s. Node xml is %s"%(tag.tagName, e, tag.toxml()))
@@ -582,9 +585,13 @@ class XmlLoader(loader.Loader):
 
     INCLUDE_ATTRS = ('file', NS, CLEAR_PARAMS, 'pass_all_args')
     @ifunless
-    def _include_tag(self, tag, context, ros_config, default_machine, is_core, verbose):
+    def _include_tag(self, tag, context, ros_config, default_machine, is_core, verbose, priority=None):
         self._check_attrs(tag, context, ros_config, XmlLoader.INCLUDE_ATTRS)
         inc_filename = self.resolve_args(tag.attributes['file'].value, context)
+
+        # Grab the include priority, which overrides priority of all nodes
+        if priority is None and tag.hasAttribute('priority'):
+            priority = int(self.resolve_args(tag.attributes['priority'].value, context))
 
         if tag.hasAttribute('pass_all_args'):
             pass_all_args = self.resolve_args(tag.attributes['pass_all_args'].value, context)
@@ -622,7 +629,8 @@ class XmlLoader(loader.Loader):
             self._launch_tag(launch, ros_config, filename=inc_filename)
             default_machine = \
                 self._recurse_load(ros_config, launch.childNodes, child_ns, \
-                                       default_machine, is_core, verbose)
+                                       default_machine, is_core, verbose, \
+                                       priority=priority)
 
             # check for unused args
             loader.post_process_include_args(child_ns)
@@ -636,7 +644,7 @@ class XmlLoader(loader.Loader):
         return default_machine
                 
     GROUP_ATTRS = (NS, CLEAR_PARAMS)
-    def _recurse_load(self, ros_config, tags, context, default_machine, is_core, verbose):
+    def _recurse_load(self, ros_config, tags, context, default_machine, is_core, verbose, priority=None):
         """
         @return: new default machine for current context
         @rtype: L{Machine}
@@ -645,18 +653,26 @@ class XmlLoader(loader.Loader):
             name = tag.tagName
             if name == 'group':
                 if ifunless_test(self, tag, context):
+                    # Grab the group's priority, if not already overridden
+                    if priority is None and tag.hasAttribute('priority'):
+                        priority = int(self.resolve_args(tag.attributes['priority'].value, context))
                     self._check_attrs(tag, context, ros_config, XmlLoader.GROUP_ATTRS)
                     child_ns = self._ns_clear_params_attr(name, tag, context, ros_config)
                     default_machine = \
                         self._recurse_load(ros_config, tag.childNodes, child_ns, \
-                                               default_machine, is_core, verbose)
+                                               default_machine, is_core, verbose, \
+                                               priority=priority)
             elif name == 'node':
                 n = self._node_tag(tag, context, ros_config, default_machine, verbose=verbose)
                 if n is not None:
+                    if priority is not None:
+                        n.priority = int(priority)
                     ros_config.add_node(n, core=is_core, verbose=verbose)
             elif name == 'test':
                 t = self._node_tag(tag, context, ros_config, default_machine, is_test=True, verbose=verbose)
                 if t is not None:
+                    if priority is not None:
+                        n.priority = int(priority)
                     ros_config.add_test(t, verbose=verbose)
             elif name == 'param':
                 self._param_tag(tag, context, ros_config, verbose=verbose)
@@ -679,7 +695,7 @@ class XmlLoader(loader.Loader):
             elif name == 'master':
                 pass #handled non-recursively
             elif name == 'include':
-                val = self._include_tag(tag, context, ros_config, default_machine, is_core, verbose)
+                val = self._include_tag(tag, context, ros_config, default_machine, is_core, verbose, priority=priority)
                 if val is not None:
                     default_machine = val
             elif name == 'env':

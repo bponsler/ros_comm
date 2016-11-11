@@ -363,6 +363,10 @@ class ROSLaunchRunner(object):
         # don't launch remote nodes
         local_nodes = [n for n in config.nodes if is_machine_local(n.machine)]
 
+        # Launch the nodes in priority order with the lowest
+        # priority (0) launched first
+        local_nodes = sorted(local_nodes, key=lambda n: n.priority)
+
         for node in local_nodes:
             proc, success = self.launch_node(node)
             if success:

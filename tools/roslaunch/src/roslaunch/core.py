@@ -424,13 +424,17 @@ class Node(object):
                  'remap_args', 'env_args',\
                  'process_name', 'output', 'cwd',
                  'launch_prefix', 'required',
-                 'filename']
+                 'filename', 'priority']
+
+    # Default priority for nodes
+    DefaultPriority = 100
 
     def __init__(self, package, node_type, name=None, namespace='/', \
                  machine_name=None, args='', \
                  respawn=False, respawn_delay=0.0, \
                  remap_args=None,env_args=None, output=None, cwd=None, \
-                 launch_prefix=None, required=False, filename='<unknown>'):
+                 launch_prefix=None, required=False, filename='<unknown>',
+                 priority=DefaultPriority):
         """
         :param package: node package name, ``str``
         :param node_type: node type, ``str``
@@ -448,6 +452,7 @@ class Node(object):
         :param launch_prefix: launch command/arguments to prepend to node executable arguments, ``str``
         :param required: node is required to stay running (launch fails if node dies), ``bool``
         :param filename: name of file Node was parsed from, ``str``
+        :param priority: the priority (0 highest) of the node
 
         :raises: :exc:`ValueError` If parameters do not validate
         """        
@@ -470,6 +475,7 @@ class Node(object):
         self.launch_prefix = launch_prefix or None
         self.required = required
         self.filename = filename
+        self.priority = int(priority)
 
         if self.respawn and self.required:
             raise ValueError("respawn and required cannot both be set to true")
@@ -523,6 +529,7 @@ class Node(object):
             ('name', name_str),
             ('launch-prefix', self.launch_prefix),
             ('required', self.required),
+            ('priority', self.priority),
             ]
 
     #TODO: unify with to_remote_xml using a filter_fn
@@ -581,7 +588,8 @@ class Test(Node):
     def __init__(self, test_name, package, node_type, name=None, \
                  namespace='/', machine_name=None, args='', \
                  remap_args=None, env_args=None, time_limit=None, cwd=None,
-                 launch_prefix=None, retry=None, filename="<unknown>"):
+                 launch_prefix=None, retry=None, filename="<unknown>",
+                 priority=None):
         """
         Construct a new test node.
         :param test_name: name of test for recording in test results, ``str``
@@ -595,7 +603,8 @@ class Test(Node):
                                    env_args=env_args,
                                    #output always is log
                                    output='log', cwd=cwd,
-                                   launch_prefix=launch_prefix, filename=filename)
+                                   launch_prefix=launch_prefix, filename=filename,
+                                   priority=priority)
         self.test_name = test_name
 
         self.retry = retry or 0

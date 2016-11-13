@@ -278,7 +278,7 @@ class XmlLoader(loader.Loader):
             raise XmlParseException(
                 "Invalid <param> tag: %s. \n\nParam xml is %s"%(e, tag.toxml()))
 
-    ARG_ATTRS = ('name', 'value', 'default', 'doc')
+    ARG_ATTRS = ('name', 'value', 'default', 'cmd_value', 'cmd_default', 'doc')
     @ifunless
     def _arg_tag(self, tag, context, ros_config, verbose=True):
         """
@@ -287,13 +287,14 @@ class XmlLoader(loader.Loader):
         try:
             self._check_attrs(tag, context, ros_config, XmlLoader.ARG_ATTRS)
             (name,) = self.reqd_attrs(tag, context, ('name',))
-            value, default, doc = self.opt_attrs(tag, context, ('value', 'default', 'doc'))
+            value, default, cmd_value, cmd_default, doc = self.opt_attrs(
+                tag, context, ('value', 'default', 'cmd_value', 'cmd_default', 'doc'))
             
-            if value is not None and default is not None:
+            if sum(map(bool, [value, default, cmd_value, cmd_default])) > 1:
                 raise XmlParseException(
-                    "<arg> tag must have one and only one of value/default.")
+                    "<arg> tag must have one and only one of value/default/cmd_value/cmd_default.")
             
-            context.add_arg(name, value=value, default=default, doc=doc)
+            context.add_arg(name, value=value, default=default, cmd_value=cmd_value, cmd_default=cmd_default, doc=doc)
 
         except substitution_args.ArgException as e:
             raise XmlParseException(

@@ -211,7 +211,7 @@ class LoaderContext(object):
             self._remap_args.remove(m)
         self._remap_args.append(remap)
         
-    def add_arg(self, name, default=None, value=None, doc=None):
+    def add_arg(self, name, default=None, value=None, cmd_value=None, cmd_default=None, doc=None):
         """
         Add 'arg' to existing context. Args are only valid for their immediate context.
         """
@@ -242,6 +242,38 @@ class LoaderContext(object):
             # assign value if not in context
             if name not in arg_dict:
                 arg_dict[name] = default
+        elif cmd_value is not None or cmd_default is not None:
+            # Check if the value has already been specified in the same
+            # way that it is checked for the value attribute
+            if cmd_value is not None and name in arg_dict and not self.pass_all_args:
+                raise LoadException("cannot override arg '%s', which has already been set"%name)
+
+            # Only assign the value if:
+            #     - the value (not default) is being specified, or
+            #     - the default value is specified and the value is not
+            #       already in the context
+            if cmd_default is None or name not in arg_dict:
+                # Select the command to execute
+                command = cmd_value if cmd_value is not None else cmd_default
+
+                try:
+                    if type(command) == unicode:
+                        command = command.encode('UTF-8') #attempt to force to string for shlex/subprocess
+                except NameError:
+                    pass
+                import subprocess, shlex #shlex rocks
+                try:
+                    p = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE)
+                    c_value = p.communicate()[0]
+                    if p.returncode != 0:
+                        raise ValueError("Cannot load arg command [%s]: command [%s] returned with code [%s]"%(name, command, p.returncode))
+                except OSError as e:
+                    if e.errno == 2:
+                        raise ValueError("Cannot load arg command [%s]: no such command [%s]"%(name, command))
+                    raise
+                if c_value is None:
+                    raise ValueError("arg: unable to get output of command [%s]"%command)
+                arg_dict[name] = c_value
         else:
             # no value or default: appending to arg_names is all we
             # need to do as it declares the existence of the arg.

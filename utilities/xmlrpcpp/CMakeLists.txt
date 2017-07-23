@@ -10,10 +10,9 @@ find_package(ament_cmake REQUIRED)
 
 set(INCLUDE_DIRS
   include
-  libb64/include
   ${ament_cmake_INCLUDE_DIRS}
 )
-include_directories(${INCLUDE_DIRS})
+include_directories(${INCLUDE_DIRS} libb64/include)
 
 set(LIBRARY_DIRS ${ament_cmake_LIBRARY_DIRS})
 

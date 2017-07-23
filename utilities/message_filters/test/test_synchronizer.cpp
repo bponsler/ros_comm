@@ -34,7 +34,7 @@
 
 #include <gtest/gtest.h>
 
-#include "ros/time.h"
+#include "tf2/time.h"
 #include <ros/init.h>
 #include "message_filters/synchronizer.h"
 #include <boost/array.hpp>
@@ -43,7 +43,7 @@ using namespace message_filters;
 
 struct Header
 {
-  ros::Time stamp;
+  tf2::TimePoint stamp;
 };
 
 
@@ -452,10 +452,12 @@ TEST(Synchronizer, add9)
 
 int main(int argc, char **argv){
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "blah");
+  rclcpp::init(argc, argv);
 
-  ros::Time::init();
-  ros::Time::setNow(ros::Time());
+  rclcpp::node::Node node = rclcpp::node::Node::make_shared("blah");
+
+  //ros::Time::init();
+  //ros::Time::setNow(ros::Time());
 
   return RUN_ALL_TESTS();
 }

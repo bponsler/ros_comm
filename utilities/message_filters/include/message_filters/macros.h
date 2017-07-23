@@ -28,7 +28,7 @@
 #ifndef MESSAGE_FILTERS_MACROS_H_
 #define MESSAGE_FILTERS_MACROS_H_
 
-#include <ros/macros.h> // for the DECL's
+#include <rospack/macros.h> // for the DECL's
 
 // Import/export for windows dll's and visibility for gcc shared libraries.
 

@@ -52,7 +52,7 @@
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/vector.hpp>
 
-#include <ros/assert.h>
+#include <ros2_time/assert.h>
 #include <ros/message_traits.h>
 #include <ros/message_event.h>
 

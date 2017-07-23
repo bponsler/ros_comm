@@ -37,7 +37,7 @@
 #include "message_filters/synchronizer.h"
 #include "message_filters/sync_policies/approximate_time.h"
 #include <vector>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 //#include <pair>
 
 using namespace message_filters;
@@ -45,7 +45,7 @@ using namespace message_filters::sync_policies;
 
 struct Header
 {
-  ros::Time stamp;
+  tf2::TimePoint stamp;
 };
 
 
@@ -64,7 +64,7 @@ namespace message_traits
 template<>
 struct TimeStamp<Msg>
 {
-  static ros::Time value(const Msg& m)
+  static tf2::TimePoint value(const Msg& m)
   {
     return m.header.stamp;
   }
@@ -72,18 +72,18 @@ struct TimeStamp<Msg>
 }
 }
 
-typedef std::pair<ros::Time, ros::Time> TimePair;
-typedef std::pair<ros::Time, unsigned int> TimeAndTopic;
+typedef std::pair<tf2::TimePoint, tf2::TimePoint> TimePair;
+typedef std::pair<tf2::TimePoint, unsigned int> TimeAndTopic;
 struct TimeQuad
 {
-  TimeQuad(ros::Time p, ros::Time q, ros::Time r, ros::Time s)
+  TimeQuad(tf2::TimePoint p, tf2::TimePoint q, tf2::TimePoint r, tf2::TimePoint s)
   {
     time[0] = p;
     time[1] = q;
     time[2] = r;
     time[3] = s;
   }
-  ros::Time time[4];
+  tf2::TimePoint time[4];
 };
 
 
@@ -223,8 +223,8 @@ TEST(ApproxTimeSync, ExactMatch) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t,1));   // A
@@ -249,8 +249,8 @@ TEST(ApproxTimeSync, PerfectMatch) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,1));   // A
@@ -274,8 +274,8 @@ TEST(ApproxTimeSync, ImperfectMatch) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,1));   // A
@@ -301,8 +301,8 @@ TEST(ApproxTimeSync, Acceleration) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));      // a
   input.push_back(TimeAndTopic(t+s*7,1));  // A
@@ -328,8 +328,8 @@ TEST(ApproxTimeSync, DroppedMessages) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,1));   // A
@@ -374,8 +374,8 @@ TEST(ApproxTimeSync, LongQueue) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,0));   // b
@@ -411,8 +411,8 @@ TEST(ApproxTimeSync, DoublePublish) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,1));   // A
@@ -439,8 +439,8 @@ TEST(ApproxTimeSync, FourTopics) {
   std::vector<TimeAndTopic> input;
   std::vector<TimeQuad> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,1));   // b
@@ -479,8 +479,8 @@ TEST(ApproxTimeSync, EarlyPublish) {
   std::vector<TimeAndTopic> input;
   std::vector<TimeQuad> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,1));   // b
@@ -503,8 +503,8 @@ TEST(ApproxTimeSync, RateBound) {
   std::vector<TimeAndTopic> input;
   std::vector<TimePair> output;
 
-  ros::Time t(0, 0);
-  ros::Duration s(1, 0);
+  tf2::TimePoint t = tf2::TimePointZero;
+  tf2::Duration s = tf2::durationFromSec(1);
 
   input.push_back(TimeAndTopic(t,0));     // a
   input.push_back(TimeAndTopic(t+s,1));   // A
@@ -536,8 +536,9 @@ TEST(ApproxTimeSync, RateBound) {
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "blah");
-  ros::Time::init();
+  rclcpp::init(argc, argv);
+  rclcpp::node::Node::SharedPtr nh = rclcpp::node::Node::make_shared("blah");
+  tf2::TimePoint::init();
 
   return RUN_ALL_TESTS();
 }

@@ -40,21 +40,19 @@
 #include "message_filters/null_types.h"
 #include "message_filters/signal9.h"
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
-#include <boost/thread/mutex.hpp>
+#include <functional>
+#include <memory>
+#include <mutex>
 
-#include <boost/bind.hpp>
+#include <boost/tuple/tuple.hpp>
+
 #include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/vector.hpp>
 
-#include <ros/assert.h>
-#include <ros/message_traits.h>
-#include <ros/message_event.h>
+#include <ros2_console/assert.hpp>
 
 #include <deque>
 #include <vector>
@@ -113,10 +111,10 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   , queue_size_(queue_size)
   , num_non_empty_deques_(0)
   , pivot_(NO_PIVOT)
-  , max_interval_duration_(ros::DURATION_MAX)
+  , max_interval_duration_(999999999)
   , age_penalty_(0.1)
   , has_dropped_messages_(9, false)
-  , inter_message_lower_bounds_(9, ros::Duration(0))
+  , inter_message_lower_bounds_(9, tf2::durationFromSec(0))
   , warned_about_incorrect_bound_(9, false)
   {
     ROS_ASSERT(queue_size_ > 0);  // The synchronizer will tend to drop many messages with a queue size of 1. At least 2 is recommended.
@@ -200,7 +198,7 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   template<int i>
   void add(const typename mpl::at_c<Events, i>::type& evt)
   {
-    boost::mutex::scoped_lock lock(data_mutex_);
+    std::lock_guard<std::mutex> lock(data_mutex_);
 
     std::deque<typename mpl::at_c<Events, i>::type>& deque = boost::get<i>(deques_);
     deque.push_back(evt);
@@ -619,13 +617,13 @@ private:
 
   // ASSUMES: we have a pivot and candidate
   template<int i>
-  ros::Time getVirtualTime()
+  tf2::TimePoint getVirtualTime()
   {
     namespace mt = ros::message_traits;
 
     if (i >= RealTypeCount::value)
     {
-      return ros::Time(0,0);  // Dummy return value
+      return tf2::TimePointZero;  // Dummy return value
     }
     ROS_ASSERT(pivot_ != NO_PIVOT);
 
@@ -634,27 +632,27 @@ private:
     if (q.empty())
     {
       ROS_ASSERT(!v.empty());  // Because we have a candidate
-      ros::Time last_msg_time = mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(*(v.back()).getMessage());
-      ros::Time msg_time_lower_bound = last_msg_time + inter_message_lower_bounds_[i];
+      tf2::TimePoint last_msg_time = mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(*(v.back()).getMessage());
+      tf2::TimePoint msg_time_lower_bound = last_msg_time + inter_message_lower_bounds_[i];
       if (msg_time_lower_bound > pivot_time_)  // Take the max
       {
         return msg_time_lower_bound;
       }
       return pivot_time_;
     }
-    ros::Time current_msg_time = mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(*(q.front()).getMessage());
+    tf2::TimePoint current_msg_time = mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(*(q.front()).getMessage());
     return current_msg_time;
   }
 
 
   // ASSUMES: we have a pivot and candidate
-  void getVirtualCandidateStart(uint32_t &start_index, ros::Time &start_time)
+  void getVirtualCandidateStart(uint32_t &start_index, tf2::TimePoint &start_time)
   {
     return getVirtualCandidateBoundary(start_index, start_time, false);
   }
 
   // ASSUMES: we have a pivot and candidate
-  void getVirtualCandidateEnd(uint32_t &end_index, ros::Time &end_time)
+  void getVirtualCandidateEnd(uint32_t &end_index, tf2::TimePoint &end_time)
   {
     return getVirtualCandidateBoundary(end_index, end_time, true);
   }
@@ -662,11 +660,11 @@ private:
   // ASSUMES: we have a pivot and candidate
   // end = true: look for the latest head of deque
   //       false: look for the earliest head of deque
-  void getVirtualCandidateBoundary(uint32_t &index, ros::Time &time, bool end)
+  void getVirtualCandidateBoundary(uint32_t &index, tf2::TimePoint &time, bool end)
   {
     namespace mt = ros::message_traits;
 
-    std::vector<ros::Time> virtual_times(9);
+    std::vector<tf2::TimePoint> virtual_times(9);
     virtual_times[0] = getVirtualTime<0>();
     virtual_times[1] = getVirtualTime<1>();
     virtual_times[2] = getVirtualTime<2>();
@@ -700,7 +698,7 @@ private:
       //printf("Entering while loop in this state [\n");
       //show_internal_state();
       //printf("]\n");
-      ros::Time end_time, start_time;
+      tf2::TimePoint end_time, start_time;
       uint32_t end_index, start_index;
       getCandidateEnd(end_index, end_time);
       getCandidateStart(start_index, start_time);
@@ -783,7 +781,7 @@ private:
         std::vector<int> num_virtual_moves(9,0);
         while (1)
         {
-          ros::Time end_time, start_time;
+          tf2::TimePoint end_time, start_time;
           uint32_t end_index, start_index;
           getVirtualCandidateEnd(end_index, end_time);
           getVirtualCandidateStart(start_index, start_time);
@@ -836,17 +834,17 @@ private:
   uint32_t num_non_empty_deques_;
   VectorTuple past_;
   Tuple candidate_;  // NULL if there is no candidate, in which case there is no pivot.
-  ros::Time candidate_start_;
-  ros::Time candidate_end_;
-  ros::Time pivot_time_;
+  tf2::TimePoint candidate_start_;
+  tf2::TimePoint candidate_end_;
+  tf2::TimePoint pivot_time_;
   uint32_t pivot_;  // Equal to NO_PIVOT if there is no candidate
-  boost::mutex data_mutex_;  // Protects all of the above
+  std::mutex data_mutex_;  // Protects all of the above
 
-  ros::Duration max_interval_duration_; // TODO: initialize with a parameter
+  tf2::Duration max_interval_duration_; // TODO: initialize with a parameter
   double age_penalty_;
 
   std::vector<bool> has_dropped_messages_;
-  std::vector<ros::Duration> inter_message_lower_bounds_;
+  std::vector<tf2::Duration> inter_message_lower_bounds_;
   std::vector<bool> warned_about_incorrect_bound_;
 };
 

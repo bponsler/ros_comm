@@ -36,10 +36,12 @@
 #define MESSAGE_FILTERS_CACHE_H_
 
 #include <deque>
-#include "boost/thread.hpp"
-#include "boost/shared_ptr.hpp"
+#include <thread>
+#include <memory>
 
-#include "ros/time.h"
+#include "tf2/time.h"
+
+#include "ros2_console/console.hpp"
 
 #include "connection.h"
 #include "simple_filter.h"
@@ -59,15 +61,14 @@ namespace message_filters
  *
  * Cache's input and output connections are both of the same signature as roscpp subscription callbacks, ie.
 \verbatim
-void callback(const boost::shared_ptr<M const>&);
+void callback(const std::shared_ptr<M const>&);
 \endverbatim
  */
 template<class M>
 class Cache : public SimpleFilter<M>
 {
 public:
-  typedef boost::shared_ptr<M const> MConstPtr;
-  typedef ros::MessageEvent<M const> EventType;
+  typedef std::shared_ptr<M> MPtr;
 
   template<class F>
   Cache(F& f, unsigned int cache_size = 1)
@@ -89,7 +90,8 @@ public:
   template<class F>
   void connectInput(F& f)
   {
-    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::EventCallback(boost::bind(&Cache::callback, this, _1)));
+    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::Callback(
+      std::bind(&Cache::callback, this, std::placeholders::_1)));
   }
 
   ~Cache()
@@ -116,43 +118,38 @@ public:
    * \brief Add a message to the cache, and pop off any elements that are too old.
    * This method is registered with a data provider when connectTo is called.
    */
-  void add(const MConstPtr& msg)
+  void add(const MPtr msg)
   {
-    add(EventType(msg));
-  }
-
-  /**
-   * \brief Add a message to the cache, and pop off any elements that are too old.
-   * This method is registered with a data provider when connectTo is called.
-   */
-  void add(const EventType& evt)
-  {
-    namespace mt = ros::message_traits;
-
+    ROS_WARN("The message_filters::Cache::add(msg) function currently adds to back");
+    
     //printf("  Cache Size: %u\n", cache_.size()) ;
     {
-      boost::mutex::scoped_lock lock(cache_lock_);
+      std::lock_guard<std::mutex> lock(cache_lock_);
 
       while (cache_.size() >= cache_size_)                       // Keep popping off old data until we have space for a new msg
         cache_.pop_front() ;                                     // The front of the deque has the oldest elem, so we can get rid of it
 
       // No longer naively pushing msgs to back. Want to make sure they're sorted correctly
-      //cache_.push_back(msg) ;                                    // Add the newest message to the back of the deque
+      cache_.push_back(msg) ;                                    // Add the newest message to the back of the deque
 
-      typename std::deque<EventType >::reverse_iterator rev_it = cache_.rbegin();
+      //typename std::deque<M>::reverse_iterator rev_it = cache_.rbegin();
 
       // Keep walking backwards along deque until we hit the beginning,
       //   or until we find a timestamp that's smaller than (or equal to) msg's timestamp
-      ros::Time evt_stamp = mt::TimeStamp<M>::value(*evt.getMessage());
-      while(rev_it != cache_.rend() && mt::TimeStamp<M>::value(*(*rev_it).getMessage()) > evt_stamp)
+      // TODO: need way to get timestamp from message
+      //rev_it = cache_.rend();
+      /*
+      tf2::TimePoint evt_stamp = mt::TimeStamp<M>::value(*msg);
+      while(rev_it != cache_.rend() && mt::TimeStamp<M>::value(*(*rev_it)) > evt_stamp)
         rev_it++;
+      */
 
       // Add msg to the cache
-      cache_.insert(rev_it.base(), evt);
+      //cache_.insert(rev_it.base(), msg);
 
     }
 
-    this->signalMessage(evt);
+    this->signalMessage(msg);
   }
 
   /**
@@ -163,38 +160,46 @@ public:
    * \param start The start of the requested interval
    * \param end The end of the requested interval
    */
-  std::vector<MConstPtr> getInterval(const ros::Time& start, const ros::Time& end) const
+  std::vector<MPtr> getInterval(const tf2::TimePoint& start, const tf2::TimePoint& end) const
   {
-    namespace mt = ros::message_traits;
+    ROS_WARN("The message_filters::Cache::getInterval(start, end) function returns all messages");
 
-    boost::mutex::scoped_lock lock(cache_lock_);
+    std::lock_guard<std::mutex> lock(cache_lock_);
 
     // Find the starting index. (Find the first index after [or at] the start of the interval)
     unsigned int start_index = 0 ;
+
+    // TODO: need a way to get times for messages
+    /*
     while(start_index < cache_.size() &&
-          mt::TimeStamp<M>::value(*cache_[start_index].getMessage()) < start)
+          mt::TimeStamp<M>::value(*cache_[start_index]) < start)
     {
       start_index++ ;
     }
+    */
 
     // Find the ending index. (Find the first index after the end of interval)
     unsigned int end_index = start_index ;
+
+    // TODO: need a way to get times for messages
+    end_index = cache_.size();
+    /*
     while(end_index < cache_.size() &&
-          mt::TimeStamp<M>::value(*cache_[end_index].getMessage()) <= end)
+          mt::TimeStamp<M>::value(*cache_[end_index]) <= end)
     {
       end_index++ ;
     }
+    */
 
-    std::vector<MConstPtr> interval_elems ;
+    std::vector<MPtr> interval_elems ;
     interval_elems.reserve(end_index - start_index) ;
     for (unsigned int i=start_index; i<end_index; i++)
     {
-      interval_elems.push_back(cache_[i].getMessage()) ;
+      interval_elems.push_back(cache_[i]) ;
     }
 
     return interval_elems ;
   }
-
 
   /**
    * \brief Retrieve the smallest interval of messages that surrounds an interval from start to end.
@@ -202,30 +207,39 @@ public:
    * If the messages in the cache do not surround (start,end), then this will return the interval
    * that gets closest to surrounding (start,end)
    */
-  std::vector<MConstPtr> getSurroundingInterval(const ros::Time& start, const ros::Time& end) const
+  std::vector<MPtr> getSurroundingInterval(const tf2::TimePoint& start, const tf2::TimePoint& end) const
   {
-    namespace mt = ros::message_traits;
-
-    boost::mutex::scoped_lock lock(cache_lock_);
+    ROS_WARN("The message_filters::Cache::getSurroundingInterval(start, end) function returns all messages");
+	
+    std::lock_guard<std::mutex> lock(cache_lock_);
     // Find the starting index. (Find the first index after [or at] the start of the interval)
     unsigned int start_index = cache_.size()-1;
+
+    // TODO: need a way to get times for messages
+    /*
     while(start_index > 0 &&
-          mt::TimeStamp<M>::value(*cache_[start_index].getMessage()) > start)
+          mt::TimeStamp<M>::value(*cache_[start_index]) > start)
     {
       start_index--;
     }
+    */
+
     unsigned int end_index = start_index;
+    // TODO: need a way to get times for messages
+    end_index = (cache_.size() - 1);
+    /*
     while(end_index < cache_.size()-1 &&
-          mt::TimeStamp<M>::value(*cache_[end_index].getMessage()) < end)
+          mt::TimeStamp<M>::value(*cache_[end_index]) < end)
     {
       end_index++;
     }
+    */
 
-    std::vector<MConstPtr> interval_elems;
+    std::vector<MPtr> interval_elems;
     interval_elems.reserve(end_index - start_index + 1) ;
     for (unsigned int i=start_index; i<=end_index; i++)
     {
-      interval_elems.push_back(cache_[i].getMessage()) ;
+      interval_elems.push_back(cache_[i]) ;
     }
 
     return interval_elems;
@@ -236,25 +250,28 @@ public:
    * \param time Time that must occur right after the returned elem
    * \returns shared_ptr to the newest elem that occurs before 'time'. NULL if doesn't exist
    */
-  MConstPtr getElemBeforeTime(const ros::Time& time) const
+  MPtr getElemBeforeTime(const tf2::TimePoint& time) const
   {
-    namespace mt = ros::message_traits;
+    ROS_WARN("The message_filters::Cache::getElemBeforeTime(time) function is not fully implemented");
 
-    boost::mutex::scoped_lock lock(cache_lock_);
+    std::lock_guard<std::mutex> lock(cache_lock_);
 
-    MConstPtr out ;
+    MPtr out ;
 
     unsigned int i=0 ;
     int elem_index = -1 ;
+    // TODO: need a way to get times for messages
+    /*
     while (i<cache_.size() &&
-           mt::TimeStamp<M>::value(*cache_[i].getMessage()) < time)
+           mt::TimeStamp<M>::value(*cache_[i]) < time)
     {
       elem_index = i ;
       i++ ;
     }
+    */
 
     if (elem_index >= 0)
-      out = cache_[elem_index].getMessage() ;
+      out = cache_[elem_index];
 
     return out ;
   }
@@ -264,25 +281,28 @@ public:
    * \param time Time that must occur right before the returned elem
    * \returns shared_ptr to the oldest elem that occurs after 'time'. NULL if doesn't exist
    */
-  MConstPtr getElemAfterTime(const ros::Time& time) const
+  MPtr getElemAfterTime(const tf2::TimePoint& time) const
   {
-    namespace mt = ros::message_traits;
+    ROS_WARN("The message_filters::Cache::getElemAfterTime(time) function is not fully implemented");
+    
+    std::lock_guard<std::mutex> lock(cache_lock_);
 
-    boost::mutex::scoped_lock lock(cache_lock_);
-
-    MConstPtr out ;
+    MPtr out ;
 
     int i=cache_.size()-1 ;
     int elem_index = -1 ;
+    // TODO: need a way to get times for messages
+    /*
     while (i>=0 &&
-        mt::TimeStamp<M>::value(*cache_[i].getMessage()) > time)
+        mt::TimeStamp<M>::value(*cache_[i]) > time)
     {
       elem_index = i ;
       i-- ;
     }
+    */
 
     if (elem_index >= 0)
-      out = cache_[elem_index].getMessage() ;
+      out = cache_[elem_index];
     else
       out.reset() ;
 
@@ -292,16 +312,18 @@ public:
   /**
    * \brief Returns the timestamp associated with the newest packet cache
    */
-  ros::Time getLatestTime() const
+  tf2::TimePoint getLatestTime() const
   {
-    namespace mt = ros::message_traits;
+    ROS_WARN("The message_filters::Cache::getLatestTime() function is not fully implemented");
+	
+    std::lock_guard<std::mutex> lock(cache_lock_);
 
-    boost::mutex::scoped_lock lock(cache_lock_);
+    tf2::TimePoint latest_time;
 
-    ros::Time latest_time;
-
-    if (cache_.size() > 0)
-      latest_time = mt::TimeStamp<M>::value(*cache_.back().getMessage());
+    if (cache_.size() > 0) {
+      // TODO: need a way to get times for messages
+      // latest_time = mt::TimeStamp<M>::value(*cache_.back());
+    }
 
     return latest_time ;
   }
@@ -309,29 +331,31 @@ public:
   /**
    * \brief Returns the timestamp associated with the oldest packet cache
    */
-  ros::Time getOldestTime() const
+  tf2::TimePoint getOldestTime() const
   {
-    namespace mt = ros::message_traits;
+    ROS_WARN("The message_filters::Cache::getLatestTime() function is not fully implemented");
 
-    boost::mutex::scoped_lock lock(cache_lock_);
+    std::lock_guard<std::mutex> lock(cache_lock_);
 
-    ros::Time oldest_time;
+    tf2::TimePoint oldest_time;
 
-    if (cache_.size() > 0)
-      oldest_time = mt::TimeStamp<M>::value(*cache_.front().getMessage());
+    if (cache_.size() > 0) {
+      // TODO: need a way to get times for messages
+      // oldest_time = mt::TimeStamp<M>::value(*cache_.front());
+    }
 
     return oldest_time ;
   }
 
 
 private:
-  void callback(const EventType& evt)
+  void callback(const MPtr msg)
   {
-    add(evt);
+    add(msg);
   }
 
-  mutable boost::mutex cache_lock_ ;            //!< Lock for cache_
-  std::deque<EventType> cache_ ;        //!< Cache for the messages
+  mutable std::mutex cache_lock_ ;      //!< Lock for cache_
+  std::deque<MPtr> cache_ ;                //!< Cache for the messages
   unsigned int cache_size_ ;            //!< Maximum number of elements allowed in the cache.
 
   Connection incoming_connection_;

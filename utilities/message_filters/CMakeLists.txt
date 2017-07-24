@@ -8,7 +8,6 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
-find_package(rospack REQUIRED)
 find_package(ros2_console REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -35,6 +34,13 @@ find_package(Boost REQUIRED COMPONENTS signals thread)
 
 add_library(${PROJECT_NAME} SHARED src/connection.cpp)
 target_link_libraries(${PROJECT_NAME} ${LIBS} ${Boost_LIBRARIES})
+
+if(WIN32)
+  # Causes the visibility macros to use dllexport rather than dllimport,
+  # which is appropriate when building the dll but not consuming it.
+  target_compile_definitions(${PROJECT_NAME}
+    PRIVATE "MESSAGE_FILTERS_BUILDING_DLL")
+endif()
 
 install(TARGETS ${PROJECT_NAME}
   ARCHIVE

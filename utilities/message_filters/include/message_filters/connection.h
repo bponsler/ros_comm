@@ -36,7 +36,7 @@
 #define MESSAGE_FILTERS_CONNECTION_H
 
 #include <boost/signals2/connection.hpp>
-#include "macros.h"
+#include "visibility_control.h"
 
 namespace message_filters
 {
@@ -44,7 +44,7 @@ namespace message_filters
 /**
  * \brief Encapsulates a connection from one filter to another (or to a user-specified callback)
  */
-class MESSAGE_FILTERS_DECL Connection
+class MESSAGE_FILTERS_PUBLIC Connection
 {
 public:
   typedef std::function<void(void)> VoidDisconnectFunction;

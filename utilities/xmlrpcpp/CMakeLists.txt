@@ -65,6 +65,4 @@ ament_export_dependencies(ament_cmake)
 ament_export_include_directories(${INCLUDE_DIRS})
 ament_export_libraries(xmlrpcpp ${LIBS})
 
-ament_package(
-  CONFIG_EXTRAS "cmake/xmlrpcpp-extras.cmake.in"
-)
+ament_package()

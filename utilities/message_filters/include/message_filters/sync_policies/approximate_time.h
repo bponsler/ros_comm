@@ -35,6 +35,8 @@
 #ifndef MESSAGE_FILTERS_SYNC_APPROXIMATE_TIME_H
 #define MESSAGE_FILTERS_SYNC_APPROXIMATE_TIME_H
 
+#include <assert.h>
+
 #include "message_filters/synchronizer.h"
 #include "message_filters/connection.h"
 #include "message_filters/null_types.h"
@@ -51,8 +53,6 @@
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/vector.hpp>
-
-#include <ros2_console/assert.hpp>
 
 #include <deque>
 #include <vector>
@@ -117,7 +117,7 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   , inter_message_lower_bounds_(9, tf2::durationFromSec(0))
   , warned_about_incorrect_bound_(9, false)
   {
-    ROS_ASSERT(queue_size_ > 0);  // The synchronizer will tend to drop many messages with a queue size of 1. At least 2 is recommended.
+    assert(queue_size_ > 0);  // The synchronizer will tend to drop many messages with a queue size of 1. At least 2 is recommended.
   }
 
   ApproximateTime(const ApproximateTime& e)
@@ -160,10 +160,10 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
     }
     std::deque<typename mpl::at_c<Events, i>::type>& deque = boost::get<i>(deques_);
     std::vector<typename mpl::at_c<Events, i>::type>& v = boost::get<i>(past_);
-    ROS_ASSERT(!deque.empty());
+    assert(!deque.empty());
     const typename mpl::at_c<Messages, i>::type &msg = *(deque.back()).getMessage();
-    ros::Time msg_time = mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(msg);
-    ros::Time previous_msg_time;
+    tf2::TimePoint msg_time = mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(msg);
+    tf2::TimePoint previous_msg_time;
     if (deque.size() == (size_t) 1)
     {
       if (v.empty())
@@ -182,14 +182,14 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
     }
     if (msg_time < previous_msg_time)
     {
-      ROS_WARN_STREAM("Messages of type " << i << " arrived out of order (will print only once)");
+      RCUTILS_LOG_WARN("Messages of type %d arrived out of order (will print only once)", i);
       warned_about_incorrect_bound_[i] = true;
     }
     else if ((msg_time - previous_msg_time) < inter_message_lower_bounds_[i])
     {
-      ROS_WARN_STREAM("Messages of type " << i << " arrived closer (" << (msg_time - previous_msg_time)
-		      << ") than the lower bound you provided (" << inter_message_lower_bounds_[i]
-		      << ") (will print only once)");
+      RCUTILS_LOG_WARN(
+        "Messages of type %s arrived closer (%f) than the lower bound you provided (%f) (will print only once)",
+	i, (msg_time - previous_msg_time), inter_message_lower_bounds_[i]);
       warned_about_incorrect_bound_[i] = true;
     }
   }
@@ -232,7 +232,7 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
       recover<7>();
       recover<8>();
       // Drop the oldest message in the offending topic
-      ROS_ASSERT(!deque.empty());
+      assert(!deque.empty());
       deque.pop_front();
       has_dropped_messages_[i] = true;
       if (pivot_ != NO_PIVOT)
@@ -249,19 +249,19 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   void setAgePenalty(double age_penalty)
   {
     // For correctness we only need age_penalty > -1.0, but most likely a negative age_penalty is a mistake.
-    ROS_ASSERT(age_penalty >= 0);
+    assert(age_penalty >= 0);
     age_penalty_ = age_penalty;
   }
 
   void setInterMessageLowerBound(int i, ros::Duration lower_bound) {
     // For correctness we only need age_penalty > -1.0, but most likely a negative age_penalty is a mistake.
-    ROS_ASSERT(lower_bound >= ros::Duration(0,0));
+    assert(lower_bound >= ros::Duration(0,0));
     inter_message_lower_bounds_[i] = lower_bound;
   }
 
   void setMaxIntervalDuration(ros::Duration max_interval_duration) {
     // For correctness we only need age_penalty > -1.0, but most likely a negative age_penalty is a mistake.
-    ROS_ASSERT(max_interval_duration >= ros::Duration(0,0));
+    assert(max_interval_duration >= ros::Duration(0,0));
     max_interval_duration_ = max_interval_duration;
   }
 
@@ -271,7 +271,7 @@ private:
   void dequeDeleteFront()
   {
     std::deque<typename mpl::at_c<Events, i>::type>& deque = boost::get<i>(deques_);
-    ROS_ASSERT(!deque.empty());
+    assert(!deque.empty());
     deque.pop_front();
     if (deque.empty())
     {
@@ -312,7 +312,7 @@ private:
       dequeDeleteFront<8>();
       break;
     default:
-      ROS_BREAK();
+      abort();
     }
   }
 
@@ -322,7 +322,7 @@ private:
   {
     std::deque<typename mpl::at_c<Events, i>::type>& deque = boost::get<i>(deques_);
     std::vector<typename mpl::at_c<Events, i>::type>& vector = boost::get<i>(past_);
-    ROS_ASSERT(!deque.empty());
+    assert(!deque.empty());
     vector.push_back(deque.front());
     deque.pop_front();
     if (deque.empty())
@@ -363,7 +363,7 @@ private:
       dequeMoveFrontToPast<8>();
       break;
     default:
-      ROS_BREAK();
+      abort();
     }
   }
 
@@ -427,7 +427,7 @@ private:
 
     std::vector<typename mpl::at_c<Events, i>::type>& v = boost::get<i>(past_);
     std::deque<typename mpl::at_c<Events, i>::type>& q = boost::get<i>(deques_);
-    ROS_ASSERT(num_messages <= v.size());
+    assert(num_messages <= v.size());
     while (num_messages > 0)
     {
       q.push_front(v.back());
@@ -481,7 +481,7 @@ private:
       v.pop_back();
     }
 
-    ROS_ASSERT(!q.empty());
+    assert(!q.empty());
 
     q.pop_front();
     if (!q.empty())
@@ -625,13 +625,13 @@ private:
     {
       return tf2::TimePointZero;  // Dummy return value
     }
-    ROS_ASSERT(pivot_ != NO_PIVOT);
+    assert(pivot_ != NO_PIVOT);
 
     std::vector<typename mpl::at_c<Events, i>::type>& v = boost::get<i>(past_);
     std::deque<typename mpl::at_c<Events, i>::type>& q = boost::get<i>(deques_);
     if (q.empty())
     {
-      ROS_ASSERT(!v.empty());  // Because we have a candidate
+      assert(!v.empty());  // Because we have a candidate
       tf2::TimePoint last_msg_time = mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(*(v.back()).getMessage());
       tf2::TimePoint msg_time_lower_bound = last_msg_time + inter_message_lower_bounds_[i];
       if (msg_time_lower_bound > pivot_time_)  // Take the max
@@ -757,7 +757,7 @@ private:
         }
       }
       // INVARIANT: we have a candidate and pivot
-      ROS_ASSERT(pivot_ != NO_PIVOT);
+      assert(pivot_ != NO_PIVOT);
       //printf("start_index == %d, pivot_ == %d\n", start_index, pivot_);
       if (start_index == pivot_)  // TODO: replace with start_time == pivot_time_
       {
@@ -810,14 +810,14 @@ private:
 	    recover<7>(num_virtual_moves[7]);
 	    recover<8>(num_virtual_moves[8]);
             (void)num_non_empty_deques_before_virtual_search; // unused variable warning stopper
-            ROS_ASSERT(num_non_empty_deques_before_virtual_search == num_non_empty_deques_);
+            assert(num_non_empty_deques_before_virtual_search == num_non_empty_deques_);
             break;
           }
           // Note: we cannot reach this point with start_index == pivot_ since in that case we would
           //       have start_time == pivot_time, in which case the two tests above are the negation
           //       of each other, so that one must be true. Therefore the while loop always terminates.
-	  ROS_ASSERT(start_index != pivot_);
-	  ROS_ASSERT(start_time < pivot_time_);
+	  assert(start_index != pivot_);
+	  assert(start_time < pivot_time_);
           dequeMoveFrontToPast(start_index);
           num_virtual_moves[start_index]++;
         } // while(1)

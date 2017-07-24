@@ -41,7 +41,7 @@
 
 #include "tf2/time.h"
 
-#include "ros2_console/console.hpp"
+#include "rcutils/logging_macros.hpp"
 
 #include "connection.h"
 #include "simple_filter.h"
@@ -107,7 +107,7 @@ public:
   {
     if (cache_size == 0)
     {
-      //ROS_ERROR("Cannot set max_size to 0") ;
+      //RCUTILS_LOG_ERROR("Cannot set max_size to 0") ;
       return ;
     }
 
@@ -120,7 +120,7 @@ public:
    */
   void add(const MPtr msg)
   {
-    ROS_WARN("The message_filters::Cache::add(msg) function currently adds to back");
+    RCUTILS_LOG_WARN("The message_filters::Cache::add(msg) function currently adds to back");
     
     //printf("  Cache Size: %u\n", cache_.size()) ;
     {
@@ -162,7 +162,7 @@ public:
    */
   std::vector<MPtr> getInterval(const tf2::TimePoint& start, const tf2::TimePoint& end) const
   {
-    ROS_WARN("The message_filters::Cache::getInterval(start, end) function returns all messages");
+    RCUTILS_LOG_WARN("The message_filters::Cache::getInterval(start, end) function returns all messages");
 
     std::lock_guard<std::mutex> lock(cache_lock_);
 
@@ -209,7 +209,7 @@ public:
    */
   std::vector<MPtr> getSurroundingInterval(const tf2::TimePoint& start, const tf2::TimePoint& end) const
   {
-    ROS_WARN("The message_filters::Cache::getSurroundingInterval(start, end) function returns all messages");
+    RCUTILS_LOG_WARN("The message_filters::Cache::getSurroundingInterval(start, end) function returns all messages");
 	
     std::lock_guard<std::mutex> lock(cache_lock_);
     // Find the starting index. (Find the first index after [or at] the start of the interval)
@@ -252,7 +252,7 @@ public:
    */
   MPtr getElemBeforeTime(const tf2::TimePoint& time) const
   {
-    ROS_WARN("The message_filters::Cache::getElemBeforeTime(time) function is not fully implemented");
+    RCUTILS_LOG_WARN("The message_filters::Cache::getElemBeforeTime(time) function is not fully implemented");
 
     std::lock_guard<std::mutex> lock(cache_lock_);
 
@@ -283,7 +283,7 @@ public:
    */
   MPtr getElemAfterTime(const tf2::TimePoint& time) const
   {
-    ROS_WARN("The message_filters::Cache::getElemAfterTime(time) function is not fully implemented");
+    RCUTILS_LOG_WARN("The message_filters::Cache::getElemAfterTime(time) function is not fully implemented");
     
     std::lock_guard<std::mutex> lock(cache_lock_);
 
@@ -314,7 +314,7 @@ public:
    */
   tf2::TimePoint getLatestTime() const
   {
-    ROS_WARN("The message_filters::Cache::getLatestTime() function is not fully implemented");
+    RCUTILS_LOG_WARN("The message_filters::Cache::getLatestTime() function is not fully implemented");
 	
     std::lock_guard<std::mutex> lock(cache_lock_);
 
@@ -333,7 +333,7 @@ public:
    */
   tf2::TimePoint getOldestTime() const
   {
-    ROS_WARN("The message_filters::Cache::getLatestTime() function is not fully implemented");
+    RCUTILS_LOG_WARN("The message_filters::Cache::getLatestTime() function is not fully implemented");
 
     std::lock_guard<std::mutex> lock(cache_lock_);
 

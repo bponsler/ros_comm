@@ -52,9 +52,7 @@
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/vector.hpp>
 
-#include <ros2_time/assert.h>
-#include <ros/message_traits.h>
-#include <ros/message_event.h>
+#include <assert.h>
 
 #include <deque>
 #include <vector>
@@ -118,7 +116,7 @@ struct ExactTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   template<int i>
   void add(const typename mpl::at_c<Events, i>::type& evt)
   {
-    ROS_ASSERT(parent_);
+    assert(parent_);
 
     namespace mt = ros::message_traits;
 

@@ -8,22 +8,22 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
-find_package(ros2_console REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rcutils REQUIRED)
 find_package(std_msgs REQUIRED)
 
 ament_python_install_package(${PROJECT_NAME})
 
-set(INCLUDE_DIRS include ${ament_cmake_INCLUDE_DIRS} ${rospack_INCLUDE_DIRS}
-  ${ros2_console_INCLUDE_DIRS} ${rclcpp_INCLUDE_DIRS} ${std_msgs_INCLUDE_DIRS})
+set(INCLUDE_DIRS include ${ament_cmake_INCLUDE_DIRS}
+  ${rcutils_INCLUDE_DIRS} ${rclcpp_INCLUDE_DIRS} ${std_msgs_INCLUDE_DIRS})
 include_directories(${INCLUDE_DIRS})
 
-set(LIBRARY_DIRS ${ament_cmake_LIBRARY_DIRS} ${rospack_LIBRARY_DIRS}
-  ${ros2_console_LIBRARY_DIRS} ${rclcpp_LIBRARY_DIRS} ${std_msgs_LIBRARY_DIRS})
+set(LIBRARY_DIRS ${ament_cmake_LIBRARY_DIRS}
+  ${rcutils_LIBRARY_DIRS} ${rclcpp_LIBRARY_DIRS} ${std_msgs_LIBRARY_DIRS})
 
 link_directories(${LIBRARY_DIRS})
 
-set(LIBS ${ament_cmake_LIBRARIES} ${rospack_LIBRARIES} ${ros2_console_LIBRARIES}
+set(LIBS ${ament_cmake_LIBRARIES} ${rcutils_LIBRARIES}
   ${rclcpp_LIBRARIES} ${std_msgs_LIBRARIES})
 
 if(NOT WIN32)
@@ -127,9 +127,8 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_dependencies(ament_cmake)
-ament_export_dependencies(rospack)
-ament_export_dependencies(ros2_console)
 ament_export_dependencies(rclcpp)
+ament_export_dependencies(rcutils)
 ament_export_dependencies(std_msgs)
 ament_export_include_directories(${INCLUDE_DIRS})
 ament_export_libraries(${PROJECT_NAME} ${LIBS})

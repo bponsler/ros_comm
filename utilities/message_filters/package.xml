@@ -13,7 +13,7 @@
   <author>Josh Faust</author>
   <author>Vijay Pradeep</author>
 
-  <buildtool_depend>ament</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
   <build_depend>boost</build_depend>

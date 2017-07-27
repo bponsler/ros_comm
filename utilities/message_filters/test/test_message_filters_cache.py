@@ -31,12 +31,11 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import rospy
 import unittest
 
-from std_msgs.msg import String
-
 from message_filters import Cache, Subscriber
+import rospy
+from std_msgs.msg import String
 
 PKG = 'message_filters'
 

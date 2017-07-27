@@ -1,5 +1,4 @@
-# Copyright (c) 2009, Willow Garage, Inc.
-# All rights reserved.
+# Copyright 2015 Open Source Robotics Foundation, Inc.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -25,29 +24,26 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Message Filter Objects
-======================
-"""
+"""Message Filter Objects."""
 
+import functools
 import itertools
 import threading
+
 import rospy
 
 
 class SimpleFilter(object):
-
     def __init__(self):
         self.callbacks = {}
 
     def registerCallback(self, cb, *args):
         """
-        Register a callback function `cb` to be called when this filter
-        has output.
+        Register a callback function `cb` to be called when this filter has output.
+
         The filter calls the function ``cb`` with a filter-dependent list of arguments,
         followed by the call-supplied arguments ``args``.
         """
-
         conn = len(self.callbacks)
         self.callbacks[conn] = (cb, args)
         return conn
@@ -56,8 +52,8 @@ class SimpleFilter(object):
         for (cb, args) in self.callbacks.values():
             cb(*(msg + args))
 
+
 class Subscriber(SimpleFilter):
-    
     """
     ROS subscription filter.  Identical arguments as :class:`rospy.Subscriber`.
 
@@ -65,6 +61,7 @@ class Subscriber(SimpleFilter):
     from a ROS subscription through to the filters which have connected
     to it.
     """
+
     def __init__(self, *args, **kwargs):
         SimpleFilter.__init__(self)
         self.topic = args[0]
@@ -78,11 +75,11 @@ class Subscriber(SimpleFilter):
         return self.topic
 
     def __getattr__(self, key):
-        """Serve same API as rospy.Subscriber"""
+        """Serve same API as rospy.Subscriber."""
         return self.sub.__getattribute__(key)
 
-class Cache(SimpleFilter):
 
+class Cache(SimpleFilter):
     """
     Stores a time history of messages.
 
@@ -167,7 +164,7 @@ class Cache(SimpleFilter):
         if not self.cache_times:
             return None
         return self.cache_times[0]
-        
+
     def getLast(self):
         if self.getLastestTime() is None:
             return None
@@ -175,7 +172,6 @@ class Cache(SimpleFilter):
 
 
 class TimeSynchronizer(SimpleFilter):
-
     """
     Synchronizes messages by their timestamps.
 
@@ -213,7 +209,7 @@ class TimeSynchronizer(SimpleFilter):
         while len(my_queue) > self.queue_size:
             del my_queue[min(my_queue)]
         # common is the set of timestamps that occur in all queues
-        common = reduce(set.intersection, [set(q) for q in self.queues])
+        common = functools.reduce(set.intersection, [set(q) for q in self.queues])
         for t in sorted(common):
             # msgs is list of msgs (one from each queue) with stamp t
             msgs = [q[t] for q in self.queues]
@@ -222,8 +218,8 @@ class TimeSynchronizer(SimpleFilter):
                 del q[t]
         self.lock.release()
 
-class ApproximateTimeSynchronizer(TimeSynchronizer):
 
+class ApproximateTimeSynchronizer(TimeSynchronizer):
     """
     Approximately synchronizes messages by their timestamps.
 
@@ -260,7 +256,7 @@ class ApproximateTimeSynchronizer(TimeSynchronizer):
             search_queues = self.queues
         else:
             search_queues = self.queues[:my_queue_index] + \
-                self.queues[my_queue_index+1:]
+                self.queues[my_queue_index + 1:]
         # sort and leave only reasonable stamps for synchronization
         stamps = []
         for queue in search_queues:
@@ -281,11 +277,11 @@ class ApproximateTimeSynchronizer(TimeSynchronizer):
             if my_queue_index is not None:
                 vv.insert(my_queue_index, stamp)
             qt = list(zip(self.queues, vv))
-            if ( ((max(vv) - min(vv)) < self.slop) and
-                (len([1 for q,t in qt if t not in q]) == 0) ):
-                msgs = [q[t] for q,t in qt]
+            if (((max(vv) - min(vv)) < self.slop) and
+                    (len([1 for q, t in qt if t not in q]) == 0)):
+                msgs = [q[t] for q, t in qt]
                 self.signalMessage(*msgs)
-                for q,t in qt:
+                for q, t in qt:
                     del q[t]
                 break  # fast finish after the synchronization
         self.lock.release()

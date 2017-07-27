@@ -13,16 +13,16 @@
 #
 #    wide.registerCallback(boost::bind(&PersonDataRecorder::wideCB, this, _1, _2, _3, _4));
 
-import rostest
-import rospy
 import random
 import unittest
 
-from message_filters import SimpleFilter, Subscriber, Cache, TimeSynchronizer
+from message_filters import SimpleFilter, TimeSynchronizer
+import rostest
 
 
 class MockHeader:
     pass
+
 
 class MockMessage:
     def __init__(self, stamp, data):
@@ -30,8 +30,10 @@ class MockMessage:
         self.header.stamp = stamp
         self.data = data
 
+
 class MockFilter(SimpleFilter):
     pass
+
 
 class TestDirected(unittest.TestCase):
 
@@ -74,9 +76,9 @@ class TestDirected(unittest.TestCase):
             self.assertEqual(set(self.collector), set(zip(seq0, seq1)))
 
 if __name__ == '__main__':
-   if 0:
+    if 0:
         rostest.unitrun('message_filters', 'directed', TestDirected)
-   else:
+    else:
         suite = unittest.TestSuite()
         suite.addTest(TestDirected('test_synchronizer'))
         unittest.TextTestRunner(verbosity=2).run(suite)

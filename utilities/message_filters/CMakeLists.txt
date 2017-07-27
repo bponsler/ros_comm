@@ -58,7 +58,8 @@ install(DIRECTORY include/${PROJECT_NAME}/
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
-  
+
+  if(FALSE) # skip running test until they are ready
   # Ugly workaround for check_test_ran macro issue
   #add_subdirectory(test)
 
@@ -124,6 +125,7 @@ if(BUILD_TESTING)
   #ament_add_nose_test(${PROJECT_NAME}_approxsync_nose_test test/test_approxsync.py)
   #ament_add_nose_test(${PROJECT_NAME}_filters_nose_test
   #  test/test_message_filters_cache.py)
+  endif() # end of skip running test
 endif()
 
 ament_export_dependencies(ament_cmake)

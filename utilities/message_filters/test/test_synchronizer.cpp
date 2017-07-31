@@ -52,8 +52,8 @@ struct Msg
   Header header;
   int data;
 };
-typedef boost::shared_ptr<Msg> MsgPtr;
-typedef boost::shared_ptr<Msg const> MsgConstPtr;
+typedef std::shared_ptr<Msg> MsgPtr;
+typedef std::shared_ptr<Msg const> MsgConstPtr;
 
 
 template<typename M0, typename M1, typename M2 = NullType, typename M3 = NullType, typename M4 = NullType,

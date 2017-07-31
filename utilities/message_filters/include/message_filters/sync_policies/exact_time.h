@@ -40,7 +40,6 @@
 #include "message_filters/null_types.h"
 #include "message_filters/signal9.h"
 
-#include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/thread/mutex.hpp>
 

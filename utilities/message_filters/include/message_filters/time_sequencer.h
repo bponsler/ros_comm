@@ -68,7 +68,7 @@ namespace message_filters
  *
  * TimeSequencer's input and output connections are both of the same signature as roscpp subscription callbacks, ie.
 \verbatim
-void callback(const boost::shared_ptr<M const>&);
+void callback(const std::shared_ptr<M const>&);
 \endverbatim
  *
  */
@@ -76,7 +76,7 @@ template<class M>
 class TimeSequencer : public SimpleFilter<M>
 {
 public:
-  typedef boost::shared_ptr<M const> MConstPtr;
+  typedef std::shared_ptr<M const> MConstPtr;
   typedef ros::MessageEvent<M const> EventType;
 
   /**

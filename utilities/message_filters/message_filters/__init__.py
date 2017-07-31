@@ -53,20 +53,20 @@ class SimpleFilter(object):
             cb(*(msg + args))
 
 
-class Subscriber(SimpleFilter):
+class Subscription(SimpleFilter):
     """
-    ROS subscription filter.  Identical arguments as :class:`rospy.Subscriber`.
+    ROS subscription filter.
 
     This class acts as a highest-level filter, simply passing messages
     from a ROS subscription through to the filters which have connected
     to it.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, node, *args, **kwargs):
+        """Except `node`, identical arguments as `rclpy.Node.create_subscription`."""
         SimpleFilter.__init__(self)
-        self.topic = args[0]
         kwargs['callback'] = self.callback
-        self.sub = rospy.Subscriber(*args, **kwargs)
+        self.sub = node.create_subscription(*args, **kwargs)
 
     def callback(self, msg):
         self.signalMessage(msg)
@@ -75,7 +75,7 @@ class Subscriber(SimpleFilter):
         return self.topic
 
     def __getattr__(self, key):
-        """Serve same API as rospy.Subscriber."""
+        """Serve same API as rclpy.Subscription."""
         return self.sub.__getattribute__(key)
 
 
@@ -204,19 +204,18 @@ class TimeSynchronizer(SimpleFilter):
             for i_q, (f, q) in enumerate(zip(fs, self.queues))]
 
     def add(self, msg, my_queue, my_queue_index=None):
-        self.lock.acquire()
-        my_queue[msg.header.stamp] = msg
-        while len(my_queue) > self.queue_size:
-            del my_queue[min(my_queue)]
-        # common is the set of timestamps that occur in all queues
-        common = functools.reduce(set.intersection, [set(q) for q in self.queues])
-        for t in sorted(common):
-            # msgs is list of msgs (one from each queue) with stamp t
-            msgs = [q[t] for q in self.queues]
-            self.signalMessage(*msgs)
-            for q in self.queues:
-                del q[t]
-        self.lock.release()
+        with self.lock:
+            my_queue[msg.header.stamp] = msg
+            while len(my_queue) > self.queue_size:
+                del my_queue[min(my_queue)]
+            # common is the set of timestamps that occur in all queues
+            common = functools.reduce(set.intersection, [set(q) for q in self.queues])
+            for t in sorted(common):
+                # msgs is list of msgs (one from each queue) with stamp t
+                msgs = [q[t] for q in self.queues]
+                self.signalMessage(*msgs)
+                for q in self.queues:
+                    del q[t]
 
 
 class ApproximateTimeSynchronizer(TimeSynchronizer):
@@ -247,41 +246,39 @@ class ApproximateTimeSynchronizer(TimeSynchronizer):
         else:
             stamp = msg.header.stamp
 
-        self.lock.acquire()
-        my_queue[stamp] = msg
-        while len(my_queue) > self.queue_size:
-            del my_queue[min(my_queue)]
-        # self.queues = [topic_0 {stamp: msg}, topic_1 {stamp: msg}, ...]
-        if my_queue_index is None:
-            search_queues = self.queues
-        else:
-            search_queues = self.queues[:my_queue_index] + \
-                self.queues[my_queue_index + 1:]
-        # sort and leave only reasonable stamps for synchronization
-        stamps = []
-        for queue in search_queues:
-            topic_stamps = []
-            for s in queue:
-                stamp_delta = abs(s - stamp)
-                if stamp_delta > self.slop:
-                    continue  # far over the slop
-                topic_stamps.append((s, stamp_delta))
-            if not topic_stamps:
-                self.lock.release()
-                return
-            topic_stamps = sorted(topic_stamps, key=lambda x: x[1])
-            stamps.append(topic_stamps)
-        for vv in itertools.product(*[zip(*s)[0] for s in stamps]):
-            vv = list(vv)
-            # insert the new message
-            if my_queue_index is not None:
-                vv.insert(my_queue_index, stamp)
-            qt = list(zip(self.queues, vv))
-            if (((max(vv) - min(vv)) < self.slop) and
-                    (len([1 for q, t in qt if t not in q]) == 0)):
-                msgs = [q[t] for q, t in qt]
-                self.signalMessage(*msgs)
-                for q, t in qt:
-                    del q[t]
-                break  # fast finish after the synchronization
-        self.lock.release()
+        with self.lock:
+            my_queue[stamp] = msg
+            while len(my_queue) > self.queue_size:
+                del my_queue[min(my_queue)]
+            # self.queues = [topic_0 {stamp: msg}, topic_1 {stamp: msg}, ...]
+            if my_queue_index is None:
+                search_queues = self.queues
+            else:
+                search_queues = self.queues[:my_queue_index] + \
+                    self.queues[my_queue_index + 1:]
+            # sort and leave only reasonable stamps for synchronization
+            stamps = []
+            for queue in search_queues:
+                topic_stamps = []
+                for s in queue:
+                    stamp_delta = abs(s - stamp)
+                    if stamp_delta > self.slop:
+                        continue  # far over the slop
+                    topic_stamps.append((s, stamp_delta))
+                if not topic_stamps:
+                    return
+                topic_stamps = sorted(topic_stamps, key=lambda x: x[1])
+                stamps.append(topic_stamps)
+            for vv in itertools.product(*[zip(*s)[0] for s in stamps]):
+                vv = list(vv)
+                # insert the new message
+                if my_queue_index is not None:
+                    vv.insert(my_queue_index, stamp)
+                qt = list(zip(self.queues, vv))
+                if (((max(vv) - min(vv)) < self.slop) and
+                        (len([1 for q, t in qt if t not in q]) == 0)):
+                    msgs = [q[t] for q, t in qt]
+                    self.signalMessage(*msgs)
+                    for q, t in qt:
+                        del q[t]
+                    break  # fast finish after the synchronization

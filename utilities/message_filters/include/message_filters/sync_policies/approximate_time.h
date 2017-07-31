@@ -35,16 +35,10 @@
 #ifndef MESSAGE_FILTERS_SYNC_APPROXIMATE_TIME_H
 #define MESSAGE_FILTERS_SYNC_APPROXIMATE_TIME_H
 
-#include <assert.h>
-
 #include "message_filters/synchronizer.h"
 #include "message_filters/connection.h"
 #include "message_filters/null_types.h"
 #include "message_filters/signal9.h"
-
-#include <functional>
-#include <memory>
-#include <mutex>
 
 #include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
@@ -52,10 +46,14 @@
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/vector.hpp>
 
+#include <assert.h>
 #include <deque>
-#include <vector>
+#include <functional>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <tuple>
+#include <vector>
 
 namespace message_filters
 {

@@ -40,6 +40,7 @@
 
 #include "connection.h"
 #include "simple_filter.h"
+#include <mutex>
 
 namespace message_filters
 {
@@ -137,7 +138,7 @@ public:
   {
     namespace mt = ros::message_traits;
 
-    boost::mutex::scoped_lock lock(messages_mutex_);
+    std::lock_guard<std::mutex> lock(messages_mutex_);
     if (mt::TimeStamp<M>::value(*evt.getMessage()) < last_time_)
     {
       return;
@@ -185,7 +186,7 @@ private:
     V_Message to_call;
 
     {
-      boost::mutex::scoped_lock lock(messages_mutex_);
+      std::lock_guard<std::mutex> lock(messages_mutex_);
 
       while (!messages_.empty())
       {
@@ -235,7 +236,7 @@ private:
 
 
   S_Message messages_;
-  boost::mutex messages_mutex_;
+  std::mutex messages_mutex_;
   ros2_time::Time last_time_;
 };
 

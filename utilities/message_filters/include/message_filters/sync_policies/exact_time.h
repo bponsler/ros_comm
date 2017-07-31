@@ -41,7 +41,6 @@
 #include "message_filters/signal9.h"
 
 #include <boost/function.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
@@ -55,6 +54,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+#include <mutex>
 
 namespace message_filters
 {
@@ -118,7 +118,7 @@ struct ExactTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
 
     namespace mt = ros::message_traits;
 
-    boost::mutex::scoped_lock lock(mutex_);
+    std::lock_guard<std::mutex> lock(_mutex_);
 
     Tuple& t = tuples_[mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(*evt.getMessage())];
     boost::get<i>(t) = evt;
@@ -230,7 +230,7 @@ private:
 
   Signal drop_signal_;
 
-  boost::mutex mutex_;
+  std::mutex mutex_;
 };
 
 } // namespace sync

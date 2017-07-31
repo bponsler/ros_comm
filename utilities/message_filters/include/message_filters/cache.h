@@ -38,6 +38,7 @@
 #include <deque>
 #include <thread>
 #include <memory>
+#include <mutex>
 
 #include "tf2/time.h"
 

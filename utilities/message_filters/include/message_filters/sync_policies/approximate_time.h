@@ -46,8 +46,6 @@
 #include <memory>
 #include <mutex>
 
-#include <boost/tuple/tuple.hpp>
-
 #include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/mpl/or.hpp>
@@ -57,6 +55,7 @@
 #include <deque>
 #include <vector>
 #include <string>
+#include <tuple>
 
 namespace message_filters
 {
@@ -102,9 +101,9 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   typedef std::vector<M6Event> M6Vector;
   typedef std::vector<M7Event> M7Vector;
   typedef std::vector<M8Event> M8Vector;
-  typedef boost::tuple<M0Event, M1Event, M2Event, M3Event, M4Event, M5Event, M6Event, M7Event, M8Event> Tuple;
-  typedef boost::tuple<M0Deque, M1Deque, M2Deque, M3Deque, M4Deque, M5Deque, M6Deque, M7Deque, M8Deque> DequeTuple;
-  typedef boost::tuple<M0Vector, M1Vector, M2Vector, M3Vector, M4Vector, M5Vector, M6Vector, M7Vector, M8Vector> VectorTuple;
+  typedef std::tuple<M0Event, M1Event, M2Event, M3Event, M4Event, M5Event, M6Event, M7Event, M8Event> Tuple;
+  typedef std::tuple<M0Deque, M1Deque, M2Deque, M3Deque, M4Deque, M5Deque, M6Deque, M7Deque, M8Deque> DequeTuple;
+  typedef std::tuple<M0Vector, M1Vector, M2Vector, M3Vector, M4Vector, M5Vector, M6Vector, M7Vector, M8Vector> VectorTuple;
 
   ApproximateTime(uint32_t queue_size)
   : parent_(0)
@@ -237,11 +236,11 @@ struct ApproximateTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
       has_dropped_messages_[i] = true;
       if (pivot_ != NO_PIVOT)
       {
-	// The candidate is no longer valid. Destroy it.
-	candidate_ = Tuple();
-	pivot_ = NO_PIVOT;
-	// There might still be enough messages to create a new candidate:
-	process();
+        // The candidate is no longer valid. Destroy it.
+        candidate_ = Tuple();
+        pivot_ = NO_PIVOT;
+        // There might still be enough messages to create a new candidate:
+        process();
       }
     }
   }

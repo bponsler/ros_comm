@@ -40,7 +40,6 @@
 #include "message_filters/null_types.h"
 #include "message_filters/signal9.h"
 
-#include <boost/tuple/tuple.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/thread/mutex.hpp>
@@ -57,6 +56,7 @@
 #include <deque>
 #include <vector>
 #include <string>
+#include <tuple>
 
 namespace message_filters
 {
@@ -85,7 +85,7 @@ struct ExactTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   typedef typename Super::M6Event M6Event;
   typedef typename Super::M7Event M7Event;
   typedef typename Super::M8Event M8Event;
-  typedef boost::tuple<M0Event, M1Event, M2Event, M3Event, M4Event, M5Event, M6Event, M7Event, M8Event> Tuple;
+  typedef std::tuple<M0Event, M1Event, M2Event, M3Event, M4Event, M5Event, M6Event, M7Event, M8Event> Tuple;
 
   ExactTime(uint32_t queue_size)
   : parent_(0)

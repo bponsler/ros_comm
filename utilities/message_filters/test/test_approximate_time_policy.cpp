@@ -99,7 +99,7 @@ public:
 				  uint32_t queue_size) :
     input_(input), output_(output), output_position_(0), sync_(queue_size)
   {
-    sync_.registerCallback(boost::bind(&ApproximateTimeSynchronizerTest::callback, this, _1, _2));
+    sync_.registerCallback(std::bind(&ApproximateTimeSynchronizerTest::callback, this, _1, _2));
   }
 
   void callback(const MsgConstPtr& p, const MsgConstPtr& q)
@@ -157,7 +157,7 @@ public:
 				      uint32_t queue_size) :
     input_(input), output_(output), output_position_(0), sync_(queue_size)
   {
-    sync_.registerCallback(boost::bind(&ApproximateTimeSynchronizerTestQuad::callback, this, _1, _2, _3, _4));
+    sync_.registerCallback(std::bind(&ApproximateTimeSynchronizerTestQuad::callback, this, _1, _2, _3, _4));
   }
 
     void callback(const MsgConstPtr& p, const MsgConstPtr& q, const MsgConstPtr& r, const MsgConstPtr& s)

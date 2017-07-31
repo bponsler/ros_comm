@@ -40,8 +40,6 @@
 #include "connection.h"
 #include "signal1.h"
 
-#include <boost/bind.hpp>
-
 #include <string>
 
 namespace message_filters

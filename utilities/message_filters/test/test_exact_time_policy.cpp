@@ -105,7 +105,7 @@ TEST(ExactTime, multipleTimes)
 {
   Sync3 sync(2);
   Helper h;
-  sync.registerCallback(boost::bind(&Helper::cb, &h));
+  sync.registerCallback(std::bind(&Helper::cb, &h));
   MsgPtr m(boost::make_shared<Msg>());
   m->header.stamp = ros::Time();
 
@@ -126,7 +126,7 @@ TEST(ExactTime, queueSize)
 {
   Sync3 sync(1);
   Helper h;
-  sync.registerCallback(boost::bind(&Helper::cb, &h));
+  sync.registerCallback(std::bind(&Helper::cb, &h));
   MsgPtr m(boost::make_shared<Msg>());
   m->header.stamp = ros::Time();
 
@@ -152,8 +152,8 @@ TEST(ExactTime, dropCallback)
 {
   Sync2 sync(1);
   Helper h;
-  sync.registerCallback(boost::bind(&Helper::cb, &h));
-  sync.getPolicy()->registerDropCallback(boost::bind(&Helper::dropcb, &h));
+  sync.registerCallback(std::bind(&Helper::cb, &h));
+  sync.getPolicy()->registerDropCallback(std::bind(&Helper::dropcb, &h));
   MsgPtr m(boost::make_shared<Msg>());
   m->header.stamp = ros::Time();
 

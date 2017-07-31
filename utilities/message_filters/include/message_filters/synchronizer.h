@@ -39,7 +39,6 @@
 #include <memory>
 #include <mutex>
 
-#include <boost/bind.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/mpl/or.hpp>

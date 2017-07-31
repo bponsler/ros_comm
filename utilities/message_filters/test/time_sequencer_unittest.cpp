@@ -89,7 +89,7 @@ TEST(TimeSequencer, simple)
   
   TimeSequencer<Msg> seq(tf2::durationFromSec(1.0), tf2::durationFromSec(0.01), 10);
   Helper h;
-  seq.registerCallback(boost::bind(&Helper::cb, &h, _1));
+  seq.registerCallback(std::bind(&Helper::cb, &h, _1));
   MsgPtr msg(boost::make_shared<Msg>());
   msg->header.stamp = tf2::get_now();
   seq.add(msg);

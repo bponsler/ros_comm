@@ -40,12 +40,8 @@
 #include "message_filters/null_types.h"
 #include "message_filters/signal9.h"
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
-#include <boost/thread/mutex.hpp>
 
-#include <boost/bind.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/mpl/or.hpp>
@@ -57,6 +53,8 @@
 #include <deque>
 #include <vector>
 #include <string>
+#include <tuple>
+#include <mutex>
 
 namespace message_filters
 {
@@ -85,7 +83,7 @@ struct ExactTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
   typedef typename Super::M6Event M6Event;
   typedef typename Super::M7Event M7Event;
   typedef typename Super::M8Event M8Event;
-  typedef boost::tuple<M0Event, M1Event, M2Event, M3Event, M4Event, M5Event, M6Event, M7Event, M8Event> Tuple;
+  typedef std::tuple<M0Event, M1Event, M2Event, M3Event, M4Event, M5Event, M6Event, M7Event, M8Event> Tuple;
 
   ExactTime(uint32_t queue_size)
   : parent_(0)
@@ -120,7 +118,7 @@ struct ExactTime : public PolicyBase<M0, M1, M2, M3, M4, M5, M6, M7, M8>
 
     namespace mt = ros::message_traits;
 
-    boost::mutex::scoped_lock lock(mutex_);
+    std::lock_guard<std::mutex> lock(_mutex_);
 
     Tuple& t = tuples_[mt::TimeStamp<typename mpl::at_c<Messages, i>::type>::value(*evt.getMessage())];
     boost::get<i>(t) = evt;
@@ -232,7 +230,7 @@ private:
 
   Signal drop_signal_;
 
-  boost::mutex mutex_;
+  std::mutex mutex_;
 };
 
 } // namespace sync

@@ -37,8 +37,6 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <mutex>
-
 #include "connection.h"
 #include "simple_filter.h"
 

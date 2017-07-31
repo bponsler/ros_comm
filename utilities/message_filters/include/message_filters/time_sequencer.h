@@ -40,6 +40,7 @@
 
 #include "connection.h"
 #include "simple_filter.h"
+#include <mutex>
 
 namespace message_filters
 {
@@ -68,7 +69,7 @@ namespace message_filters
  *
  * TimeSequencer's input and output connections are both of the same signature as roscpp subscription callbacks, ie.
 \verbatim
-void callback(const boost::shared_ptr<M const>&);
+void callback(const std::shared_ptr<M const>&);
 \endverbatim
  *
  */
@@ -76,7 +77,7 @@ template<class M>
 class TimeSequencer : public SimpleFilter<M>
 {
 public:
-  typedef boost::shared_ptr<M const> MConstPtr;
+  typedef std::shared_ptr<M const> MConstPtr;
   typedef ros::MessageEvent<M const> EventType;
 
   /**
@@ -124,7 +125,7 @@ public:
   void connectInput(F& f)
   {
     incoming_connection_.disconnect();
-    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::EventCallback(boost::bind(&TimeSequencer::cb, this, _1)));
+    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::EventCallback(std::bind(&TimeSequencer::cb, this, _1)));
   }
 
   ~TimeSequencer()
@@ -137,7 +138,7 @@ public:
   {
     namespace mt = ros::message_traits;
 
-    boost::mutex::scoped_lock lock(messages_mutex_);
+    std::lock_guard<std::mutex> lock(messages_mutex_);
     if (mt::TimeStamp<M>::value(*evt.getMessage()) < last_time_)
     {
       return;
@@ -185,7 +186,7 @@ private:
     V_Message to_call;
 
     {
-      boost::mutex::scoped_lock lock(messages_mutex_);
+      std::lock_guard<std::mutex> lock(messages_mutex_);
 
       while (!messages_.empty())
       {
@@ -235,7 +236,7 @@ private:
 
 
   S_Message messages_;
-  boost::mutex messages_mutex_;
+  std::mutex messages_mutex_;
   ros2_time::Time last_time_;
 };
 

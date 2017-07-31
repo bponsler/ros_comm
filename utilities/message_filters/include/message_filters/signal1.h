@@ -39,8 +39,7 @@
 
 #include "connection.h"
 
-//#include <boost/bind.hpp>
-//#include <boost/thread/mutex.hpp>
+#include <mutex>
 
 namespace message_filters
 {

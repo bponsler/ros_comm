@@ -40,7 +40,6 @@
 #include "message_filters/null_types.h"
 #include "message_filters/signal9.h"
 
-#include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/at.hpp>

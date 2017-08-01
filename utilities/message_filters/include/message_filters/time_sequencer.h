@@ -35,10 +35,12 @@
 #ifndef MESSAGE_FILTERS_TIME_SEQUENCER_H
 #define MESSAGE_FILTERS_TIME_SEQUENCER_H
 
-#include <ros/ros.h>
+#include <ros2_time/time.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include "connection.h"
 #include "simple_filter.h"
+#include <mutex>
 
 namespace message_filters
 {
@@ -52,7 +54,7 @@ namespace message_filters
  *
  * \section behavior BEHAVIOR
 
- * At construction, the TimeSequencer takes a ros::Duration
+ * At construction, the TimeSequencer takes a ros2_time::Duration
  * "delay" which specifies how long to queue up messages to
  * provide a time sequencing over them.  As messages arrive they are
  * sorted according to their time stamps.  A callback for a message is
@@ -67,7 +69,7 @@ namespace message_filters
  *
  * TimeSequencer's input and output connections are both of the same signature as roscpp subscription callbacks, ie.
 \verbatim
-void callback(const boost::shared_ptr<M const>&);
+void callback(const std::shared_ptr<M const>&);
 \endverbatim
  *
  */
@@ -75,7 +77,7 @@ template<class M>
 class TimeSequencer : public SimpleFilter<M>
 {
 public:
-  typedef boost::shared_ptr<M const> MConstPtr;
+  typedef std::shared_ptr<M const> MConstPtr;
   typedef ros::MessageEvent<M const> EventType;
 
   /**
@@ -87,7 +89,7 @@ public:
    * \param nh (optional) The NodeHandle to use to create the ros::Timer that runs at update_rate
    */
   template<class F>
-  TimeSequencer(F& f, ros::Duration delay, ros::Duration update_rate, uint32_t queue_size, ros::NodeHandle nh = ros::NodeHandle())
+    TimeSequencer(F& f, ros2_time::Duration delay, ros2_time::Duration update_rate, uint32_t queue_size, rclcpp::node::Node::SharedPtr nh = rclcpp::node::Node::make_shared("node"))
   : delay_(delay)
   , update_rate_(update_rate)
   , queue_size_(queue_size)
@@ -107,7 +109,7 @@ public:
    * \param queue_size The number of messages to store
    * \param nh (optional) The NodeHandle to use to create the ros::Timer that runs at update_rate
    */
-  TimeSequencer(ros::Duration delay, ros::Duration update_rate, uint32_t queue_size, ros::NodeHandle nh = ros::NodeHandle())
+ TimeSequencer(ros2_time::Duration delay, ros2_time::Duration update_rate, uint32_t queue_size, rclcpp::node::Node::SharedPtr nh = rclcpp::node::Node::make_shared("node"))
   : delay_(delay)
   , update_rate_(update_rate)
   , queue_size_(queue_size)
@@ -123,7 +125,7 @@ public:
   void connectInput(F& f)
   {
     incoming_connection_.disconnect();
-    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::EventCallback(boost::bind(&TimeSequencer::cb, this, _1)));
+    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::EventCallback(std::bind(&TimeSequencer::cb, this, _1)));
   }
 
   ~TimeSequencer()
@@ -136,7 +138,7 @@ public:
   {
     namespace mt = ros::message_traits;
 
-    boost::mutex::scoped_lock lock(messages_mutex_);
+    std::lock_guard<std::mutex> lock(messages_mutex_);
     if (mt::TimeStamp<M>::value(*evt.getMessage()) < last_time_)
     {
       return;
@@ -184,13 +186,13 @@ private:
     V_Message to_call;
 
     {
-      boost::mutex::scoped_lock lock(messages_mutex_);
+      std::lock_guard<std::mutex> lock(messages_mutex_);
 
       while (!messages_.empty())
       {
         const EventType& e = *messages_.begin();
-        ros::Time stamp = mt::TimeStamp<M>::value(*e.getMessage());
-        if (stamp + delay_ <= ros::Time::now())
+        ros2_time::Time stamp = mt::TimeStamp<M>::value(*e.getMessage());
+        if (stamp + delay_ <= ros2_time::Time::now())
         {
           last_time_ = stamp;
           to_call.push_back(e);
@@ -223,19 +225,19 @@ private:
     update_timer_ = nh_.createTimer(update_rate_, &TimeSequencer::update, this);
   }
 
-  ros::Duration delay_;
-  ros::Duration update_rate_;
+  ros2_time::Duration delay_;
+  ros2_time::Duration update_rate_;
   uint32_t queue_size_;
-  ros::NodeHandle nh_;
+  rclcpp::node::Node::SharedPtr nh_;
 
-  ros::Timer update_timer_;
+  ros2_time::Timer update_timer_;
 
   Connection incoming_connection_;
 
 
   S_Message messages_;
-  boost::mutex messages_mutex_;
-  ros::Time last_time_;
+  std::mutex messages_mutex_;
+  ros2_time::Time last_time_;
 };
 
 }

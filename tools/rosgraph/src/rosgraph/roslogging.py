@@ -39,11 +39,44 @@ import sys
 import time
 import logging
 import logging.config
+import inspect
+
+import yaml
 
 import rospkg
 from rospkg.environment import ROS_LOG_DIR
 
 class LoggingException(Exception): pass
+
+class RospyLogger(logging.getLoggerClass()):
+    def findCaller(self):
+        """
+        Find the stack frame of the caller so that we can note the source
+        file name, line number, and function name with class name if possible.
+        """
+        file_name, lineno, func_name = super(RospyLogger, self).findCaller()
+
+        f = inspect.currentframe()
+        if f is not None:
+            f = f.f_back
+        while hasattr(f, "f_code"):
+            # we search the right frame using the data already found by parent class
+            # following python logging findCaller() implementation logic
+            co = f.f_code
+            filename = os.path.normcase(co.co_filename)
+            if filename != file_name or f.f_lineno != lineno or co.co_name != func_name:
+                f = f.f_back
+                continue
+            # we found  the correct frame, now extending func_name with class name
+            try:
+                class_name = f.f_locals['self'].__class__.__name__
+                func_name = '%s.%s' % (class_name, func_name)
+            except KeyError:  # if the function is unbound, there is no self.
+                pass
+            break
+        return file_name, lineno, func_name
+
+logging.setLoggerClass(RospyLogger)
 
 def renew_latest_logdir(logfile_dir):
     log_dir = os.path.dirname(logfile_dir)
@@ -83,7 +116,13 @@ def configure_logging(logname, level=logging.INFO, filename=None, env=None):
             makedirs_with_parent_perms(logfile_dir)
         except OSError:
             # cannot print to screen because command-line tools with output use this
-            sys.stderr.write("WARNING: cannot create log directory [%s]. Please set %s to a writable location.\n"%(logfile_dir, ROS_LOG_DIR))
+            if os.path.exists(logfile_dir):
+                # We successfully created the logging folder, but could not change
+                # permissions of the new folder to the same as the parent folder
+                sys.stderr.write("WARNING: Could not change permissions for folder [%s], make sure that the parent folder has correct permissions.\n"%logfile_dir)
+            else:
+                # Could not create folder
+                sys.stderr.write("WARNING: cannot create log directory [%s]. Please set %s to a writable location.\n"%(logfile_dir, ROS_LOG_DIR))
             return None
     elif os.path.isfile(logfile_dir):
         raise LoggingException("Cannot save log files: file [%s] is in the way"%logfile_dir)
@@ -103,16 +142,17 @@ def configure_logging(logname, level=logging.INFO, filename=None, env=None):
     else:
         # search for logging config file in /etc/.  If it's not there,
         # look for it package-relative.
-        fname = 'python_logging.conf'
+        config_file = None
         rosgraph_d = rospkg.RosPack().get_path('rosgraph')
-        for f in [os.path.join(rospkg.get_ros_home(), 'config', fname),
-                  '/etc/ros/%s'%(fname),
-                  os.path.join(rosgraph_d, 'conf', fname)]:
-            if os.path.isfile(f):
-                config_file = f
+        for fname in ['python_logging.conf', 'python_logging.yaml']:
+            for f in [os.path.join(rospkg.get_ros_home(), 'config', fname),
+                      '/etc/ros/%s'%(fname),
+                      os.path.join(rosgraph_d, 'conf', fname)]:
+                if os.path.isfile(f):
+                    config_file = f
+                    break
+            if config_file is not None:
                 break
-        else:
-            config_file = None
 
     if config_file is None or not os.path.isfile(config_file):
         # logging is considered soft-fail
@@ -122,9 +162,17 @@ def configure_logging(logname, level=logging.INFO, filename=None, env=None):
     
     # pass in log_filename as argument to pylogging.conf
     os.environ['ROS_LOG_FILENAME'] = log_filename
-    # #3625: disabling_existing_loggers=False
-    logging.config.fileConfig(config_file, disable_existing_loggers=False)
+    if config_file.endswith(('.yaml', '.yml')):
+        with open(config_file) as f:
+            dict_conf = yaml.load(f)
+        dict_conf.setdefault('version', 1)
+        logging.config.dictConfig(dict_conf)
+    else:
+        # #3625: disabling_existing_loggers=False
+        logging.config.fileConfig(config_file, disable_existing_loggers=False)
+
     return log_filename
+
 
 def makedirs_with_parent_perms(p):
     """

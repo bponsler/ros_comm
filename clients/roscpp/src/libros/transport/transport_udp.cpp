@@ -48,6 +48,9 @@
 #elif defined(__ANDROID__)
   // For readv() and writev() on ANDROID
   #include <sys/uio.h>
+#elif defined(_POSIX_VERSION)
+  // For readv() and writev()
+  #include <sys/uio.h>
 #endif
 
 namespace ros
@@ -590,6 +593,7 @@ int32_t TransportUDP::write(uint8_t* buffer, uint32_t size)
       else
       {
         num_bytes = 0;
+        --this_block;
       }
     }
     else if (num_bytes < (unsigned) sizeof(header))

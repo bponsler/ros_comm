@@ -34,16 +34,15 @@
 
 #include <gtest/gtest.h>
 
-#include "ros/time.h"
+#include "tf2/time.h"
 #include <ros/init.h>
 #include "message_filters/synchronizer.h"
-#include <boost/array.hpp>
 
 using namespace message_filters;
 
 struct Header
 {
-  ros::Time stamp;
+  tf2::TimePoint stamp;
 };
 
 
@@ -52,8 +51,8 @@ struct Msg
   Header header;
   int data;
 };
-typedef boost::shared_ptr<Msg> MsgPtr;
-typedef boost::shared_ptr<Msg const> MsgConstPtr;
+typedef std::shared_ptr<Msg> MsgPtr;
+typedef std::shared_ptr<Msg const> MsgConstPtr;
 
 
 template<typename M0, typename M1, typename M2 = NullType, typename M3 = NullType, typename M4 = NullType,
@@ -452,10 +451,12 @@ TEST(Synchronizer, add9)
 
 int main(int argc, char **argv){
   testing::InitGoogleTest(&argc, argv);
-  ros::init(argc, argv, "blah");
+  rclcpp::init(argc, argv);
 
-  ros::Time::init();
-  ros::Time::setNow(ros::Time());
+  rclcpp::node::Node node = rclcpp::node::Node::make_shared("blah");
+
+  //ros::Time::init();
+  //ros::Time::setNow(ros::Time());
 
   return RUN_ALL_TESTS();
 }

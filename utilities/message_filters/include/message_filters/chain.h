@@ -60,21 +60,21 @@ public:
    * \param index The index of the filter (returned by addFilter())
    */
   template<typename F>
-  boost::shared_ptr<F> getFilter(size_t index) const
+  std::shared_ptr<F> getFilter(size_t index) const
   {
-    boost::shared_ptr<void> filter = getFilterForIndex(index);
+    std::shared_ptr<void> filter = getFilterForIndex(index);
     if (filter)
     {
-      return boost::static_pointer_cast<F>(filter);
+      return std::static_pointer_cast<F>(filter);
     }
 
-    return boost::shared_ptr<F>();
+    return std::shared_ptr<F>();
   }
 
 protected:
-  virtual boost::shared_ptr<void> getFilterForIndex(size_t index) const = 0;
+  virtual std::shared_ptr<void> getFilterForIndex(size_t index) const = 0;
 };
-typedef boost::shared_ptr<ChainBase> ChainBasePtr;
+typedef std::shared_ptr<ChainBase> ChainBasePtr;
 
 /**
  * \brief Chains a dynamic number of simple filters together.  Allows retrieval of filters by index after they are added.
@@ -92,8 +92,8 @@ void myCallback(const MsgConstPtr& msg)
 }
 
 Chain<Msg> c;
-c.addFilter(boost::make_shared<PassThrough<Msg> >());
-c.addFilter(boost::make_shared<PassThrough<Msg> >());
+c.addFilter(std::make_shared<PassThrough<Msg> >());
+c.addFilter(std::make_shared<PassThrough<Msg> >());
 c.registerCallback(myCallback);
 \endverbatim
 
@@ -111,8 +111,7 @@ template<typename M>
 class Chain : public ChainBase, public SimpleFilter<M>
 {
 public:
-  typedef boost::shared_ptr<M const> MConstPtr;
-  typedef ros::MessageEvent<M const> EventType;
+  typedef std::shared_ptr<M> MPtr;
 
   /**
    * \brief Default constructor
@@ -143,7 +142,7 @@ public:
   template<class F>
   size_t addFilter(F* filter)
   {
-    boost::shared_ptr<F> ptr(filter, NullDeleter());
+    std::shared_ptr<F> ptr(filter, NullDeleter());
     return addFilter(ptr);
   }
 
@@ -151,16 +150,17 @@ public:
    * \brief Add a filter to this chain, by shared_ptr.  Returns the index of that filter in the chain
    */
   template<class F>
-  size_t addFilter(const boost::shared_ptr<F>& filter)
+  size_t addFilter(const std::shared_ptr<F>& filter)
   {
     FilterInfo info;
-    info.add_func = boost::bind((void(F::*)(const EventType&))&F::add, filter.get(), _1);
+    info.add_func = std::bind((void(F::*)(const MPtr))&F::add, filter.get(), std::placeholders::_1);
     info.filter = filter;
-    info.passthrough = boost::make_shared<PassThrough<M> >();
+    info.passthrough = std::make_shared<PassThrough<M> >();
 
     last_filter_connection_.disconnect();
     info.passthrough->connectInput(*filter);
-    last_filter_connection_ = info.passthrough->registerCallback(typename SimpleFilter<M>::EventCallback(boost::bind(&Chain::lastFilterCB, this, _1)));
+    last_filter_connection_ = info.passthrough->registerCallback(typename SimpleFilter<M>::Callback(
+      std::bind(&Chain::lastFilterCB, this, std::placeholders::_1)));
     if (!filters_.empty())
     {
       filter->connectInput(*filters_.back().passthrough);
@@ -179,14 +179,14 @@ public:
    * \param index The index of the filter (returned by addFilter())
    */
   template<typename F>
-  boost::shared_ptr<F> getFilter(size_t index) const
+  std::shared_ptr<F> getFilter(size_t index) const
   {
     if (index >= filters_.size())
     {
-      return boost::shared_ptr<F>();
+      return std::shared_ptr<F>();
     }
 
-    return boost::static_pointer_cast<F>(filters_[index].filter);
+    return std::static_pointer_cast<F>(filters_[index].filter);
   }
 
   /**
@@ -196,52 +196,48 @@ public:
   void connectInput(F& f)
   {
     incoming_connection_.disconnect();
-    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::EventCallback(boost::bind(&Chain::incomingCB, this, _1)));
+    incoming_connection_ = f.registerCallback(typename SimpleFilter<M>::Callback(
+      std::bind(&Chain::incomingCB, this, std::placeholders::_1)));
   }
 
   /**
    * \brief Add a message to the start of this chain
    */
-  void add(const MConstPtr& msg)
-  {
-    add(EventType(msg));
-  }
-
-  void add(const EventType& evt)
+  void add(const MPtr msg)
   {
     if (!filters_.empty())
     {
-      filters_[0].add_func(evt);
+      filters_[0].add_func(msg);
     }
   }
 
 protected:
-  virtual boost::shared_ptr<void> getFilterForIndex(size_t index) const
+  virtual std::shared_ptr<void> getFilterForIndex(size_t index) const
   {
     if (index >= filters_.size())
     {
-      return boost::shared_ptr<void>();
+      return std::shared_ptr<void>();
     }
 
     return filters_[index].filter;
   }
 
 private:
-  void incomingCB(const EventType& evt)
+  void incomingCB(const MPtr msg)
   {
-    add(evt);
+    add(msg);
   }
 
-  void lastFilterCB(const EventType& evt)
+  void lastFilterCB(const MPtr msg)
   {
-    this->signalMessage(evt);
+    this->signalMessage(msg);
   }
 
   struct FilterInfo
   {
-    boost::function<void(const EventType&)> add_func;
-    boost::shared_ptr<void> filter;
-    boost::shared_ptr<PassThrough<M> > passthrough;
+    std::function<void(const MPtr)> add_func;
+    std::shared_ptr<void> filter;
+    std::shared_ptr<PassThrough<M> > passthrough;
   };
   typedef std::vector<FilterInfo> V_FilterInfo;
 

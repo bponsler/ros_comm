@@ -119,6 +119,21 @@ def _anon(resolved, a, args, context):
     anon_context = context['anon']
     return resolved.replace("$(%s)" % a, _eval_anon(id=args[0], anons=anon_context))
 
+def _eval_dirname(filename):
+    if not filename:
+        raise SubstitutionException("Cannot substitute $(dirname), no file/directory information available.")
+    return os.path.abspath(os.path.dirname(filename))
+
+def _dirname(resolved, a, args, context):
+    """
+    process $(dirname)
+    @return: updated resolved argument
+    @rtype: str
+    @raise SubstitutionException: if no information about the current launch file is available, for example
+           if XML was passed via stdin, or this is a remote launch.
+    """
+    return resolved.replace("$(%s)" % a, _eval_dirname(context.get('filename', None)))
+
 def _eval_find(pkg):
     rp = _get_rospack()
     return rp.get_path(pkg)
@@ -144,21 +159,25 @@ def _find(resolved, a, args, context):
     rp = _get_rospack()
     if path:
         source_path_to_packages = rp.get_custom_cache('source_path_to_packages', {})
+        res = None
         try:
-            return _find_executable(
+            res = _find_executable(
                 resolve_without_path, a, [args[0], path], context,
                 source_path_to_packages=source_path_to_packages)
         except SubstitutionException:
             pass
-        try:
-            return _find_resource(
-                resolve_without_path, a, [args[0], path], context,
-                source_path_to_packages=source_path_to_packages)
-        except SubstitutionException:
-            pass
+        if res is None:
+            try:
+                res = _find_resource(
+                    resolve_without_path, a, [args[0], path], context,
+                    source_path_to_packages=source_path_to_packages)
+            except SubstitutionException:
+                pass
         # persist mapping of packages in rospack instance
         if source_path_to_packages:
             rp.set_custom_cache('source_path_to_packages', source_path_to_packages)
+        if res is not None:
+            return res
     pkg_path = rp.get_path(args[0])
     if path:
         pkg_path = os.path.join(pkg_path, path)
@@ -312,7 +331,13 @@ def _eval(s, context):
     def _eval_anon_context(id): return _eval_anon(id, anons=context['anon'])
     # inject arg context
     def _eval_arg_context(name): return convert_value(_eval_arg(name, args=context['arg']), 'auto')
-    functions = dict(anon=_eval_anon_context, arg=_eval_arg_context)
+    # inject dirname context
+    def _eval_dirname_context(): return _eval_dirname(context['filename'])
+    functions = {
+        'anon': _eval_anon_context,
+        'arg': _eval_arg_context,
+        'dirname': _eval_dirname_context
+    }
     functions.update(_eval_dict)
 
     # ignore values containing double underscores (for safety)
@@ -321,7 +346,7 @@ def _eval(s, context):
         raise SubstitutionException("$(eval ...) may not contain double underscore expressions")
     return str(eval(s, {}, _DictWrapper(context['arg'], functions)))
 
-def resolve_args(arg_str, context=None, resolve_anon=True):
+def resolve_args(arg_str, context=None, resolve_anon=True, filename=None):
     """
     Resolves substitution args (see wiki spec U{http://ros.org/wiki/roslaunch}).
 
@@ -355,6 +380,7 @@ def resolve_args(arg_str, context=None, resolve_anon=True):
     commands = {
         'env': _env,
         'optenv': _optenv,
+        'dirname': _dirname,
         'anon': _anon,
         'arg': _arg,
     }
@@ -367,7 +393,7 @@ def resolve_args(arg_str, context=None, resolve_anon=True):
     return resolved
 
 def _resolve_args(arg_str, context, resolve_anon, commands):
-    valid = ['find', 'env', 'optenv', 'anon', 'arg']
+    valid = ['find', 'env', 'optenv', 'dirname', 'anon', 'arg']
     resolved = arg_str
     for a in _collect_args(arg_str):
         splits = [s for s in a.split(' ') if s]

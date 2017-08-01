@@ -1,6 +1,7 @@
-<package>
+<?xml version='1.0' encoding='utf-8'?>
+<package format="2">
   <name>xmlrpcpp</name>
-  <version>1.12.6</version>
+  <version>1.13.0</version>
   <description>
     XmlRpc++ is a C++ implementation of the XML-RPC protocol. This version is
     heavily modified from the package available on SourceForge in order to
@@ -15,13 +16,10 @@
   <author>Konstantin Pilipchuk</author>
   <author>Morgan Quigley</author>
 
-  <buildtool_depend>catkin</buildtool_depend>
-
-  <build_depend>cpp_common</build_depend>
-
-  <run_depend>cpp_common</run_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
   <export>
-    <rosdoc external="http://xmlrpcpp.sourceforge.net/doc/hierarchy.html"/>
+    <rosdoc external="http://xmlrpcpp.sourceforge.net/doc/hierarchy.html" />
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

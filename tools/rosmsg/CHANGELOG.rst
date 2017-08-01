@@ -2,6 +2,13 @@
 Changelog for package rosmsg
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.13.0 (2017-02-22)
+-------------------
+
+1.12.7 (2017-02-17)
+-------------------
+* add rosmsg info as alias of rosmsg show (`#941 <https://github.com/ros/ros_comm/issues/941>`_)
+
 1.12.6 (2016-10-26)
 -------------------
 

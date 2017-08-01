@@ -2,6 +2,16 @@
 Changelog for package rospy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.13.0 (2017-02-22)
+-------------------
+
+1.12.7 (2017-02-17)
+-------------------
+* make get_published_topics threadsafe (`#958 <https://github.com/ros/ros_comm/issues/958>`_)
+* use poll in write_header() if available to support higher numbered fileno (`#929 <https://github.com/ros/ros_comm/pull/929>`_)
+* use epoll instead of poll if available to gracefully close hung connections (`#831 <https://github.com/ros/ros_comm/issues/831>`_)
+* fix Python 3 compatibility issues (`#565 <https://github.com/ros/ros_comm/issues/565>`_)
+
 1.12.6 (2016-10-26)
 -------------------
 * improve reconnection logic on timeout and other common errors (`#851 <https://github.com/ros/ros_comm/pull/851>`_)

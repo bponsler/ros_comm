@@ -32,16 +32,17 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import rostest
-import rospy
-import unittest
 import random
+import unittest
 
-import message_filters
-from message_filters import ApproximateTimeSynchronizer
+from message_filters import ApproximateTimeSynchronizer, SimpleFilter
+import rospy
+import rostest
+
 
 class MockHeader:
     pass
+
 
 class MockMessage:
     def __init__(self, stamp, data):
@@ -49,12 +50,15 @@ class MockMessage:
         self.header.stamp = stamp
         self.data = data
 
+
 class MockHeaderlessMessage:
     def __init__(self, data):
         self.data = data
 
-class MockFilter(message_filters.SimpleFilter):
+
+class MockFilter(SimpleFilter):
     pass
+
 
 class TestApproxSync(unittest.TestCase):
 
@@ -114,7 +118,7 @@ class TestApproxSync(unittest.TestCase):
             self.assertEqual(self.collector, [])
             for i in random.sample(range(N), N):
                 msg = seq1[i]
-                rospy.rostime._set_rostime(rospy.Time(i+0.05))
+                rospy.rostime._set_rostime(rospy.Time(i + 0.05))
                 m1.signalMessage(msg)
             self.assertEqual(set(self.collector), set(zip(seq0, seq1)))
 

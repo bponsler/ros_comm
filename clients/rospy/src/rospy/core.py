@@ -72,6 +72,7 @@ from rospy.names import *
 from rospy.impl.validators import ParameterInvalid
 
 from rosgraph_msgs.msg import Log
+from functools import partial
 
 _logger = logging.getLogger("rospy.core")
 
@@ -143,17 +144,38 @@ def rospywarn(msg, *args):
     """Internal rospy client library warn logging"""
     _rospy_logger.warn(msg, *args)
     
-logdebug = logging.getLogger('rosout').debug
 
-logwarn = logging.getLogger('rosout').warning
+def _base_logger(msg, *args, **kwargs):
 
-loginfo = logging.getLogger('rosout').info
+    name = kwargs.pop('logger_name', None)
+    throttle = kwargs.pop('logger_throttle', None)
+    level = kwargs.pop('logger_level', None)
+                    
+    rospy_logger = logging.getLogger('rosout')
+    if name:
+        rospy_logger = rospy_logger.getChild(name)
+    logfunc = getattr(rospy_logger, level)
+
+    if throttle:
+        caller_id = _frame_to_caller_id(inspect.currentframe().f_back.f_back)
+        _logging_throttle(caller_id, logfunc, throttle, msg, *args)
+    else:
+        logfunc(msg, *args)
+
+
+loginfo = partial(_base_logger, logger_level='info')
+
 logout = loginfo # alias deprecated name
 
-logerr = logging.getLogger('rosout').error
+logdebug = partial(_base_logger, logger_level='debug')
+
+logwarn = partial(_base_logger, logger_level='warn')
+
+logerr = partial(_base_logger, logger_level='error')
+
 logerror = logerr # alias logerr
 
-logfatal = logging.getLogger('rosout').critical
+logfatal = partial(_base_logger, logger_level='critical')
 
 
 class LoggingThrottle(object):
@@ -181,39 +203,66 @@ class LoggingThrottle(object):
 _logging_throttle = LoggingThrottle()
 
 
-def _frame_record_to_caller_id(frame_record):
-    frame, _, lineno, _, code, _ = frame_record
+def _frame_to_caller_id(frame):
     caller_id = (
         inspect.getabsfile(frame),
-        lineno,
+        frame.f_lineno,
         frame.f_lasti,
     )
     return pickle.dumps(caller_id)
 
 
 def logdebug_throttle(period, msg):
-    caller_id = _frame_record_to_caller_id(inspect.stack()[1])
-    _logging_throttle(caller_id, logdebug, period, msg)
-
-
+    logdebug(msg, logger_name=None, logger_throttle=period)
+      
 def loginfo_throttle(period, msg):
-    caller_id = _frame_record_to_caller_id(inspect.stack()[1])
-    _logging_throttle(caller_id, loginfo, period, msg)
-
-
+    loginfo(msg, logger_name=None, logger_throttle=period)
+              
 def logwarn_throttle(period, msg):
-    caller_id = _frame_record_to_caller_id(inspect.stack()[1])
-    _logging_throttle(caller_id, logwarn, period, msg)
-
+    logwarn(msg, logger_name=None, logger_throttle=period)
 
 def logerr_throttle(period, msg):
-    caller_id = _frame_record_to_caller_id(inspect.stack()[1])
-    _logging_throttle(caller_id, logerr, period, msg)
-
-
+    logerr(msg, logger_name=None, logger_throttle=period)
+                              
 def logfatal_throttle(period, msg):
-    caller_id = _frame_record_to_caller_id(inspect.stack()[1])
-    _logging_throttle(caller_id, logfatal, period, msg)
+    logfatal(msg, logger_name=None, logger_throttle=period)
+
+class LoggingOnce(object):
+
+    called_caller_ids = set()
+
+    def __call__(self, caller_id, logging_func, msg):
+        if caller_id not in self.called_caller_ids:
+            logging_func(msg)
+            self.called_caller_ids.add(caller_id)
+
+
+_logging_once = LoggingOnce()
+
+
+def logdebug_once(msg):
+    caller_id = _frame_to_caller_id(inspect.currentframe().f_back)
+    _logging_once(caller_id, logdebug, msg)
+
+
+def loginfo_once(msg):
+    caller_id = _frame_to_caller_id(inspect.currentframe().f_back)
+    _logging_once(caller_id, loginfo, msg)
+
+
+def logwarn_once(msg):
+    caller_id = _frame_to_caller_id(inspect.currentframe().f_back)
+    _logging_once(caller_id, logwarn, msg)
+
+
+def logerr_once(msg):
+    caller_id = _frame_to_caller_id(inspect.currentframe().f_back)
+    _logging_once(caller_id, logerr, msg)
+
+
+def logfatal_once(msg):
+    caller_id = _frame_to_caller_id(inspect.currentframe().f_back)
+    _logging_once(caller_id, logfatal, msg)
 
 
 #########################################################

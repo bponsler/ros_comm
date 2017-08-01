@@ -31,12 +31,12 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import rospy
 import unittest
 
+from message_filters import Cache, Subscription
+import rclpy
+import rospy
 from std_msgs.msg import String
-
-from message_filters import Cache, Subscriber
 
 PKG = 'message_filters'
 
@@ -56,8 +56,18 @@ class AnonymMsg:
 
 class TestCache(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        rclpy.init()
+        cls.node = rclpy.create_node('my_node', namespace='/my_ns')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.node.destroy_node()
+        rclpy.shutdown()
+
     def test_all_funcs(self):
-        sub = Subscriber("/empty", String)
+        sub = Subscription(self.node, String, "/empty")
         cache = Cache(sub, 5)
 
         msg = AnonymMsg()
@@ -122,7 +132,7 @@ class TestCache(unittest.TestCase):
                          "wrong message discarded")
 
     def test_headerless(self):
-        sub = Subscriber("/empty", String)
+        sub = Subscription(self.node, String, "/empty")
         cache = Cache(sub, 5, allow_headerless=False)
 
         msg = String()

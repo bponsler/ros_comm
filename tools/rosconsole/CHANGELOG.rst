@@ -2,6 +2,12 @@
 Changelog for package rosconsole
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.13.0 (2017-02-22)
+-------------------
+
+1.12.7 (2017-02-17)
+-------------------
+
 1.12.6 (2016-10-26)
 -------------------
 * add missing walltime to roscpp logging (`#879 <https://github.com/ros/ros_comm/pull/879>`_)

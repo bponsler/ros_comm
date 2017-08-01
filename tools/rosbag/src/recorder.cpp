@@ -60,7 +60,7 @@
 
 #include "ros/network.h"
 #include "ros/xmlrpc_manager.h"
-#include "XmlRpc.h"
+#include "xmlrpcpp/XmlRpc.h"
 
 #define foreach BOOST_FOREACH
 
@@ -347,6 +347,11 @@ void Recorder::updateFilenames() {
         parts.push_back(timeToStr(ros::WallTime::now()));
     if (options_.split)
         parts.push_back(boost::lexical_cast<string>(split_count_));
+
+    if (parts.size() == 0)
+    {
+      throw BagException("Bag filename is empty (neither of these was specified: prefix, append_date, split)");
+    }
 
     target_filename_ = parts[0];
     for (unsigned int i = 1; i < parts.size(); i++)

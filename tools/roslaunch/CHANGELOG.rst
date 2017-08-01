@@ -2,6 +2,14 @@
 Changelog for package roslaunch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.13.0 (2017-02-22)
+-------------------
+
+1.12.7 (2017-02-17)
+-------------------
+* improve error message for invalid tags (`#989 <https://github.com/ros/ros_comm/pull/989>`_)
+* fix caching logic to improve performance (`#931 <https://github.com/ros/ros_comm/pull/931>`_)
+
 1.12.6 (2016-10-26)
 -------------------
 * add USE_TEST_DEPENDENCIES option to roslaunch_add_file_check() (`#910 <https://github.com/ros/ros_comm/pull/910>`_)

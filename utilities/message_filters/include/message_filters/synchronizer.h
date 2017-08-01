@@ -35,13 +35,10 @@
 #ifndef MESSAGE_FILTERS_SYNCHRONIZER_H
 #define MESSAGE_FILTERS_SYNCHRONIZER_H
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
-#include <boost/thread/mutex.hpp>
+#include <functional>
+#include <memory>
+#include <mutex>
 
-#include <boost/bind.hpp>
-#include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/at.hpp>
@@ -52,12 +49,11 @@
 #include "connection.h"
 #include "null_types.h"
 #include "signal9.h"
-#include <ros/message_traits.h>
-#include <ros/message_event.h>
 
 #include <deque>
 #include <vector>
 #include <string>
+#include <type_traits>
 
 namespace message_filters
 {
@@ -287,15 +283,15 @@ public:
   {
     disconnectAll();
 
-    input_connections_[0] = f0.registerCallback(boost::function<void(const M0Event&)>(boost::bind(&Synchronizer::template cb<0>, this, _1)));
-    input_connections_[1] = f1.registerCallback(boost::function<void(const M1Event&)>(boost::bind(&Synchronizer::template cb<1>, this, _1)));
-    input_connections_[2] = f2.registerCallback(boost::function<void(const M2Event&)>(boost::bind(&Synchronizer::template cb<2>, this, _1)));
-    input_connections_[3] = f3.registerCallback(boost::function<void(const M3Event&)>(boost::bind(&Synchronizer::template cb<3>, this, _1)));
-    input_connections_[4] = f4.registerCallback(boost::function<void(const M4Event&)>(boost::bind(&Synchronizer::template cb<4>, this, _1)));
-    input_connections_[5] = f5.registerCallback(boost::function<void(const M5Event&)>(boost::bind(&Synchronizer::template cb<5>, this, _1)));
-    input_connections_[6] = f6.registerCallback(boost::function<void(const M6Event&)>(boost::bind(&Synchronizer::template cb<6>, this, _1)));
-    input_connections_[7] = f7.registerCallback(boost::function<void(const M7Event&)>(boost::bind(&Synchronizer::template cb<7>, this, _1)));
-    input_connections_[8] = f8.registerCallback(boost::function<void(const M8Event&)>(boost::bind(&Synchronizer::template cb<8>, this, _1)));
+    input_connections_[0] = f0.registerCallback(std::function<void(const M0Event&)>(std::bind(&Synchronizer::template cb<0>, this, std::placeholders::_1)));
+    input_connections_[1] = f1.registerCallback(std::function<void(const M1Event&)>(std::bind(&Synchronizer::template cb<1>, this, std::placeholders::_1)));
+    input_connections_[2] = f2.registerCallback(std::function<void(const M2Event&)>(std::bind(&Synchronizer::template cb<2>, this, std::placeholders::_1)));
+    input_connections_[3] = f3.registerCallback(std::function<void(const M3Event&)>(std::bind(&Synchronizer::template cb<3>, this, std::placeholders::_1)));
+    input_connections_[4] = f4.registerCallback(std::function<void(const M4Event&)>(std::bind(&Synchronizer::template cb<4>, this, std::placeholders::_1)));
+    input_connections_[5] = f5.registerCallback(std::function<void(const M5Event&)>(std::bind(&Synchronizer::template cb<5>, this, std::placeholders::_1)));
+    input_connections_[6] = f6.registerCallback(std::function<void(const M6Event&)>(std::bind(&Synchronizer::template cb<6>, this, std::placeholders::_1)));
+    input_connections_[7] = f7.registerCallback(std::function<void(const M7Event&)>(std::bind(&Synchronizer::template cb<7>, this, std::placeholders::_1)));
+    input_connections_[8] = f8.registerCallback(std::function<void(const M8Event&)>(std::bind(&Synchronizer::template cb<8>, this, std::placeholders::_1)));
   }
 
   template<class C>
@@ -337,7 +333,7 @@ public:
   using Policy::add;
 
   template<int i>
-  void add(const boost::shared_ptr<typename mpl::at_c<Messages, i>::type const>& msg)
+  void add(const std::shared_ptr<typename mpl::at_c<Messages, i>::type const>& msg)
   {
     this->template add<i>(typename mpl::at_c<Events, i>::type(msg));
   }
@@ -373,10 +369,8 @@ struct PolicyBase
 {
   typedef mpl::vector<M0, M1, M2, M3, M4, M5, M6, M7, M8> Messages;
   typedef Signal9<M0, M1, M2, M3, M4, M5, M6, M7, M8> Signal;
-  typedef mpl::vector<ros::MessageEvent<M0 const>, ros::MessageEvent<M1 const>, ros::MessageEvent<M2 const>, ros::MessageEvent<M3 const>,
-                      ros::MessageEvent<M4 const>, ros::MessageEvent<M5 const>, ros::MessageEvent<M6 const>, ros::MessageEvent<M7 const>,
-                      ros::MessageEvent<M8 const> > Events;
-  typedef typename mpl::fold<Messages, mpl::int_<0>, mpl::if_<mpl::not_<boost::is_same<mpl::_2, NullType> >, mpl::next<mpl::_1>, mpl::_1> >::type RealTypeCount;
+  typedef mpl::vector<const std::shared_ptr<M0>>, const std::shared_ptr<M1>, const std::shared_ptr<M2>>, const std::shared_ptr<M3>, const std::shared_ptr<M4>, const std::shared_ptr<M5>, const std::shared_ptr<M6>, const std::shared_ptr<M7>, const std::shared_ptr<M8> > Events;
+  typedef typename mpl::fold<Messages, mpl::int_<0>, mpl::if_<mpl::not_<std::is_same<mpl::_2, NullType> >, mpl::next<mpl::std::placeholders::_1>, mpl::std::placeholders::_1> >::type RealTypeCount;
   typedef typename mpl::at_c<Events, 0>::type M0Event;
   typedef typename mpl::at_c<Events, 1>::type M1Event;
   typedef typename mpl::at_c<Events, 2>::type M2Event;

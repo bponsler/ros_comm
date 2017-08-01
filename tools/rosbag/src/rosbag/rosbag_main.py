@@ -65,6 +65,13 @@ def handle_split(option, opt_str, value, parser):
         print("Use of \"--split <MAX_SIZE>\" has been deprecated.  Please use --split --size <MAX_SIZE> or --split --duration <MAX_DURATION>", file=sys.stderr)
         parser.values.size = int(parser.rargs.pop(0))
 
+
+def _stop_process(signum, frame, old_handler, process):
+    process.terminate()
+    if old_handler:
+        old_handler(signum, frame)
+
+
 def record_cmd(argv):
     parser = optparse.OptionParser(usage="rosbag record TOPIC1 [TOPIC2 TOPIC3 ...]",
                                    description="Record a bag file with the contents of specified topics.",
@@ -124,9 +131,15 @@ def record_cmd(argv):
 
     cmd.extend(args)
 
+    old_handler = signal.signal(
+        signal.SIGTERM,
+        lambda signum, frame: _stop_process(signum, frame, old_handler, process)
+    )
     # Better way of handling it than os.execv
     # This makes sure stdin handles are passed to the process.
-    subprocess.call(cmd)
+    process = subprocess.Popen(cmd)
+    process.wait()
+
 
 def info_cmd(argv):
     parser = optparse.OptionParser(usage='rosbag info [options] BAGFILE1 [BAGFILE2 BAGFILE3 ...]',
@@ -208,6 +221,9 @@ def play_cmd(argv):
     parser.add_option("--topics", dest="topics", default=[],  callback=handle_topics, action="callback", help="topics to play back")
     parser.add_option("--pause-topics", dest="pause_topics", default=[],  callback=handle_pause_topics, action="callback", help="topics to pause on during playback")
     parser.add_option("--bags",  help="bags files to play back from")
+    parser.add_option("--wait-for-subscribers",  dest="wait_for_subscribers", default=False, action="store_true", help="wait for at least one subscriber on each topic before publishing")
+    parser.add_option("--rate-control-topic", dest="rate_control_topic", default='', type='str', help="watch the given topic, and if the last publish was more than <rate-control-max-delay> ago, wait until the topic publishes again to continue playback")
+    parser.add_option("--rate-control-max-delay", dest="rate_control_max_delay", default=1.0, type='float', help="maximum time difference from <rate-control-topic> before pausing")
 
     (options, args) = parser.parse_args(argv)
 
@@ -231,6 +247,7 @@ def play_cmd(argv):
     if options.loop:       cmd.extend(["--loop"])
     if options.keep_alive: cmd.extend(["--keep-alive"])
     if options.try_future: cmd.extend(["--try-future-version"])
+    if options.wait_for_subscribers: cmd.extend(["--wait-for-subscribers"])
 
     if options.clock:
         cmd.extend(["--clock", "--hz", str(options.freq)])
@@ -254,10 +271,23 @@ def play_cmd(argv):
     if options.topics or options.pause_topics:
         cmd.extend(['--bags'])
 
+    if options.rate_control_topic:
+        cmd.extend(['--rate-control-topic', str(options.rate_control_topic)])
+
+    if options.rate_control_max_delay:
+        cmd.extend(['--rate-control-max-delay', str(options.rate_control_max_delay)])
+
     cmd.extend(args)
+
+    old_handler = signal.signal(
+        signal.SIGTERM,
+        lambda signum, frame: _stop_process(signum, frame, old_handler, process)
+    )
     # Better way of handling it than os.execv
     # This makes sure stdin handles are passed to the process.
-    subprocess.call(cmd)
+    process = subprocess.Popen(cmd)
+    process.wait()
+
 
 def filter_cmd(argv):
     def expr_eval(expr):
@@ -455,7 +485,7 @@ def check_cmd(argv):
     migrations = checkbag(mm, args[0])
        
     if len(migrations) == 0:
-        print('Bag file is up to date.')
+        print('Bag file does not need any migrations.')
         exit(0)
         
     print('The following migrations need to occur:')

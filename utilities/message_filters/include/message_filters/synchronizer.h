@@ -39,7 +39,6 @@
 #include <memory>
 #include <mutex>
 
-#include <boost/type_traits/is_same.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/mpl/or.hpp>
 #include <boost/mpl/at.hpp>
@@ -54,6 +53,7 @@
 #include <deque>
 #include <vector>
 #include <string>
+#include <type_traits>
 
 namespace message_filters
 {
@@ -370,7 +370,7 @@ struct PolicyBase
   typedef mpl::vector<M0, M1, M2, M3, M4, M5, M6, M7, M8> Messages;
   typedef Signal9<M0, M1, M2, M3, M4, M5, M6, M7, M8> Signal;
   typedef mpl::vector<const std::shared_ptr<M0>>, const std::shared_ptr<M1>, const std::shared_ptr<M2>>, const std::shared_ptr<M3>, const std::shared_ptr<M4>, const std::shared_ptr<M5>, const std::shared_ptr<M6>, const std::shared_ptr<M7>, const std::shared_ptr<M8> > Events;
-  typedef typename mpl::fold<Messages, mpl::int_<0>, mpl::if_<mpl::not_<boost::is_same<mpl::_2, NullType> >, mpl::next<mpl::std::placeholders::_1>, mpl::std::placeholders::_1> >::type RealTypeCount;
+  typedef typename mpl::fold<Messages, mpl::int_<0>, mpl::if_<mpl::not_<std::is_same<mpl::_2, NullType> >, mpl::next<mpl::std::placeholders::_1>, mpl::std::placeholders::_1> >::type RealTypeCount;
   typedef typename mpl::at_c<Events, 0>::type M0Event;
   typedef typename mpl::at_c<Events, 1>::type M1Event;
   typedef typename mpl::at_c<Events, 2>::type M2Event;

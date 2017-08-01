@@ -35,8 +35,6 @@
 #ifndef MESSAGE_FILTERS_SIGNAL9_H
 #define MESSAGE_FILTERS_SIGNAL9_H
 
-#include <boost/noncopyable.hpp>
-
 #include "connection.h"
 #include "null_types.h"
 

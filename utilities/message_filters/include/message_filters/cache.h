@@ -42,7 +42,7 @@
 
 #include "tf2/time.h"
 
-#include "rcutils/logging_macros.hpp"
+#include "rcutils/logging_macros.h"
 
 #include "connection.h"
 #include "simple_filter.h"

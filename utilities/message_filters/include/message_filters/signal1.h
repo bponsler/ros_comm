@@ -35,8 +35,6 @@
 #ifndef MESSAGE_FILTERS_SIGNAL1_H
 #define MESSAGE_FILTERS_SIGNAL1_H
 
-//#include <boost/noncopyable.hpp>
-
 #include "connection.h"
 
 #include <mutex>
